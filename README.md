@@ -14,6 +14,9 @@ This toolkit is simply data in, algorithm, data out, and combine data. for some 
 If you are comfortable making system calls from python interpriters, this kit is also not for you unless you want to oquicly manipulate data and get statistics without waiting for interpreter and importing pandas.
 Another limitation is that conversion and copying takes time but also keep in mind that linux system keeps the files in ram so there is no difference of keeping the txt file loaded in interpreter or not. 
 
+Intallation:
+compile using C++14 compiler. C++11 should work too most of the time. gcc 4.9.1 is fine. `g++ -std=c++14 transpose.cpp -o transpose`
+
 tools:
 
 **transpose** -- transposes the table. it simply swaps rows and columns [done]
