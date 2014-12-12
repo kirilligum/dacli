@@ -17,14 +17,23 @@ Another limitation is that conversion and copying takes time but also keep in mi
 tools:
 
 **transpose** -- transposes the table. it simply swaps rows and columns [done]
+
 **cuti**-- similar to cut but cuts the matrix based on header and index into a submatrix not just by integer value of index but by regex and arithmetic expressions.
+
 **cutd** -- similar to head,tail, sed -n '7p', grep with added arithmetics support. It builds a submatrix that contains matched elements with unmatched cells as missing values. Both headers, row header and column index, are kept.
+
 **merge** --merges columns or rows based on headers. As a spot, you can define the location where the mergin matrix would be placed.
+
 **replace** -- replace values that are missing from another table or replace non-missing values. the shapes can be different
+
 **calc** -- arithmetic expresion (regex can be done with sed)
+
 **accu** -- accumulaters. mean, std dev, median, higher moments, t-test, z-test, anova, and so on.
+
 **gen** -- generators.  generate data from distribution, names headers can be supplied as a string or file.
+
 **miss** -- missing value replacement using, value, mean median, regression, stochastic regression, expectation minimization (GMM), multiple imputation (bootstrap+regression), and may be also machine learning (in practice not useful due to long computational time)
+
 **ml** -- machine learning random/extreame forest, gmm, svm and other methods for classification, regression, density, clustering and so on. 
 
 
