@@ -50,7 +50,7 @@ Examples of cli using core utils that are useful for data science:
 
 ===== Suppose we need to make a regression on data that has too many 0 as targets. We need a subset to test things and we want it to contain as many non-zero targets as zero targets. we simply need to sort the set on the target and head -n2000 (given that there are 1000 non-zero targets):
 
-    echo cat -n transpose.cpp | grep target | cut -f1
+    cat -n transpose.cpp | tr , \\n | grep target | cut -f1
 
 you’ll get the index of the target column let it be $x
 
