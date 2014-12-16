@@ -26,8 +26,6 @@ int main(int argc, char* argv[]){
     }
     ++icol;
   }
-  cout << cols<< endl;
-  cout << colsi<< endl;
 
   vector<vector<string>> data;
   size_t irow=1;
@@ -37,7 +35,11 @@ int main(int argc, char* argv[]){
     string first_cell;
     getline(issl,first_cell,',');
     if(any_of(begin(rowsin),end(rowsin),[=](regex r){return regex_match(first_cell,r);})){
-      icol=0;
+      icol=1;
+      if(find(begin(colsi),end(colsi),icol)!=end(colsi)){
+        cells.push_back(first_cell);
+      }
+      ++icol;
       rows.push_back(first_cell);
       rowsi.push_back(irow);
       for(string cell; getline(issl,cell,',');){
@@ -50,12 +52,19 @@ int main(int argc, char* argv[]){
       ++irow;
     }
   }
-  cout << data<<endl;
 
-  for(auto j:cols) cout << j << ',';
+  for(size_t i=0; i<cols.size(); ++i) {
+    cout << cols[i];
+    if(i!=cols.size()-1)
+      cout << ",";
+  }
   cout << endl;
   for(auto i:data){
-    for(auto j:i) cout << j << ',';
+    for(size_t j=0; j<i.size(); ++j) {
+      cout << i[j];
+      if(j!=i.size()-1)
+        cout << ",";
+    }
     cout << endl;
   }
 
