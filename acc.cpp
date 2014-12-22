@@ -29,20 +29,26 @@ int main()
     string idx; getline(issl,idx,',');
     size_t icol =0;
     for(string tok;getline(issl,tok,','); ){
-      accs[icol++](stod(tok));
+      ref(accs[icol++])(stod(tok));
     }
   }
 
   for(size_t i=0; i<col_names.size();++i){
     cout << col_names[i];
     if(i!=col_names.size()-1) cout << ',';
-    else cout << " # acc_name";
+    else cout << " ,# acc_name";
   }
+  cout << endl;
+  //for(size_t i=0; i<accs.size();++i){
+    //cout << mean(accs[i]);
+    //if(i!=col_names.size()-1) cout << ',';
+    //else cout << " ,# count";
+  //}
   cout << endl;
   for(size_t i=0; i<accs.size();++i){
     cout << mean(accs[i]);
     if(i!=col_names.size()-1) cout << ',';
-    else cout << " # mean";
+    else cout << " ,# mean";
   }
   cout << endl;
 
