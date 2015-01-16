@@ -21,6 +21,10 @@ compile using C++14 compiler. C++11 should work too most of the time. gcc 4.9.1 
 
 tools:
 
+>cat m.csv
+a,b,c
+1,2,3
+
 **transpose** -- transposes the table. it simply swaps rows and columns [done]
 
 **cuti**-- similar to cut but cuts the matrix based on header and index into a submatrix not just by integer value of index but by regex and arithmetic expressions.
