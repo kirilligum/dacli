@@ -1,6 +1,7 @@
 #include <regex>
-#include <unordered_set>
-#include "headersnb.hpp"
+#include <vector>
+#include <iostream>
+//#include "headersnb.hpp"
 
 using namespace std;
 

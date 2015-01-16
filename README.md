@@ -4,14 +4,14 @@ dacli
 dacli (Data Analysis Command Line Interface) is a set of high performance tools to analyse data in the simplest way -- by piping commands to each other in a command line. 
 
 # Why:
-- linux-intuitive = follows linux syntax + works with linux commands
-- fast prototyping = pipes (intuitive workflow) + less typinga + use with tools that you already know
-- BigData friendly = minimal use of memory, i/o, and cpu + split and distribute the workload + scheduling on clusters
+- **linux-intuitive** = follows linux syntax + works with linux commands
+- **fast prototyping** = streams and component programming by using pipes `|` for intuitive work flow + less typing + leverage cli tools that you already know
+- **BigData friendly** = minimal use of memory, I/O, and CPU + split and distribute the workload + scheduling on clusters
 
 
 # Tools:
 
-**cuti**-- similar to cut but cuts the matrix based on header and index into a submatrix not just by integer value of index but by regex and ranges.
+**cuti** -- similar to `cut` but cuts the table based on its header and index into a subtable not just by integer value of index but by regex and ranges
 
     > cat test.csv|column -ts,
     id   aa    b    dd   eed    e    f
@@ -41,6 +41,6 @@ dacli (Data Analysis Command Line Interface) is a set of high performance tools 
     f    43   4    1      0.01   23
 
 
-Intallation:
-compile using C++14 compiler. C++11 should work too most of the time. gcc 4.9.1 is fine. `g++ -std=c++14 transpose.cpp -o transpose`
+# Intallation:
+compile using C++14 compiler. gcc 4.9.1 is fine. Ex: `g++ -std=c++14 transpose.cpp -o transpose`
 
