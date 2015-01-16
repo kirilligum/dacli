@@ -3,13 +3,13 @@ duacli
 
 dacli (Data Analysis Command Line Interface) is a set of high performance tools to analyse data in the simplest way -- by piping commands to each other in a command line. 
 
-Why?
-- use bash instead of python,R,octave and other languages for quicker prototyping
-- use the power of linux. There are many existing command line tools already. Eg. corutils, libsvm, awk
-- well integrated. use these tools together on clusters without special packages for parallel programming.
-- speed. the tools are faster than cython, python, R
+Why:
+- linux-intuitive = follows linux syntax + works with linux commands
+- fast prototyping = pipes (intuitive workflow) + less typinga + use with tools that you already know
+- BigData friendly = minimal use of memory, i/o, and cpu + split workload + scheduling on clusters
 
-tools:
+
+Tools:
 
 **cuti**-- similar to cut but cuts the matrix based on header and index into a submatrix not just by integer value of index but by regex and ranges.
 
