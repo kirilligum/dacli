@@ -47,7 +47,7 @@ void compare_with_range(E element,B& bounds,Counter& in_range,Op op){
 }
 
 template <typename T>
-auto parse_col_header(T header_line){
+auto select_cols(T header_line){
   vector<regex> mcols,mcols_rbegins,mcols_rends;////note set,unordered_multiset don't work with regex due to absense of comparision or hashing
   vector<unsigned> mcols_empty;
   tie(mcols_empty,mcols,mcols_rbegins,mcols_rends) = parse_header(header_line);
@@ -72,30 +72,23 @@ auto parse_col_header(T header_line){
   return make_tuple(cols,colsi);
 }
 
-template <typename CS,typenamet>
+template <typename CS,typename T>
 auto select_rows_get_data(CS colsi, T header_line){
+  vector<vector<string>> data;
   vector<regex> mrows,mrows_rbegins,mrows_rends;
   vector<unsigned> mrows_empty;
-  tie(mrows_empty,mrows,mrows_rbegins,mrows_rends) = parse_header(header_linea);
-  //vector<string> rows;
-  //vector<size_t> rowsi;
-  size_t irow=1;
+  tie(mrows_empty,mrows,mrows_rbegins,mrows_rends) = parse_header(header_line);
   unsigned in_row_range=0;
   if(mrows_empty[0]) in_row_range=1;
-
   for(string line; getline(cin,line);){
     vector<string> cells;
     istringstream issl(line);
-    //// parse  row  header (row's numbers)
     string first_cell;
     getline(issl,first_cell,',');
     cells.push_back(first_cell);
-
     compare_with_range(first_cell,mrows_rbegins,in_row_range,plus<unsigned>());
     if(any_of(begin(mrows),end(mrows),[=](regex r){return regex_match(first_cell,r);})||in_row_range){
       size_t icol=1;
-      //rows.push_back(first_cell);
-      //rowsi.push_back(irow);
       for(string cell; getline(issl,cell,',');){
         if(find(begin(colsi),end(colsi),icol)!=end(colsi)){
           cells.push_back(cell);
@@ -103,36 +96,32 @@ auto select_rows_get_data(CS colsi, T header_line){
         ++icol;
       }
       data.push_back(cells);
-      ++irow;
     }
     if(in_row_range) compare_with_range(first_cell,mrows_rends,in_row_range,minus<unsigned>());
   }
-
   return data;
 }
 
 int main(int argc, char* argv[]){
   cin.sync_with_stdio(false);///> makes reading stdin a lot faster
 
-  ///// parese column header
   vector<string> cols;
   vector<size_t> colsi;
-  tie(cols,colsi) = parse_col_header(argv[2]);
+  tie(cols,colsi) = select_cols(argv[2]);///> select cols listed in argv[2] from the first line of stdin
 
 
-  ///// parese column header and get data
   vector<vector<string>> data;
-  data = select_rows_get_data(colsi,argv[1])
+  data = select_rows_get_data(colsi,argv[1]);///> checks if the row is listed in argv[1] and reads its data while acounting for selected cols
 
-
+  ///
+  /// output of the dataframe
+  ///
   cout << "id,";
   for(size_t i=0; i<cols.size(); ++i) {
     cout << cols[i];
-    if(i!=cols.size()-1)
-      cout << ",";
+    if(i!=cols.size()-1) cout << ",";
   }
   cout << endl;
-  //for(auto i:data){
   for(size_t i=0; i<data.size();++i){
     cout << data[i][0]<<",";
     for(size_t j=1; j<data[i].size(); ++j) {
