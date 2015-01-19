@@ -81,13 +81,14 @@ int main()
     ///
     /// second pass of two-pass . turned out to be too slow
     ///
+    size_t xvn = xv[0].size();
     for(size_t icol=0; icol<col_names.size();++icol){
       double m= sum[icol]/count[icol];
       mean[icol]= m;
       double sum2=0,sum3=0;
-      for(auto i:xv[icol]){
-        sum2+=pow((i-m),2);
-        sum3+=(i-m);
+      for(size_t i=0;i<xvn;++i){
+        sum2+=pow((xv[icol][i]-m),2);
+        sum3+=(xv[icol][i]-m);
       }
       var2p[icol]=(sum2-pow(sum3,2)/count[icol])/(count[icol]-1);
     }
