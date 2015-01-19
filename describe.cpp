@@ -61,11 +61,11 @@ int main()
         }
         if(std::isfinite(x)){
           count[icol]++;
-          sum[icol]+=x;
-          //double delta = x - mean[icol];
-          //mean[icol]=mean[icol]+delta/count[icol];
-          //m2[icol] += delta*(x-mean[icol]);
-          xv[icol].push_back(x);
+          //sum[icol]+=x;
+          double delta = x - mean[icol];
+          mean[icol]=mean[icol]+delta/count[icol];
+          m2[icol] += delta*(x-mean[icol]);
+          //xv[icol].push_back(x);
         }
         else if(std::isinf(x))
           infs[icol]++;
@@ -81,17 +81,17 @@ int main()
     ///
     /// second pass of two-pass . turned out to be too slow
     ///
-    size_t xvn = xv[0].size();
-    for(size_t icol=0; icol<col_names.size();++icol){
-      double m= sum[icol]/count[icol];
-      mean[icol]= m;
-      double sum2=0,sum3=0;
-      for(size_t i=0;i<xvn;++i){
-        sum2+=pow((xv[icol][i]-m),2);
-        sum3+=(xv[icol][i]-m);
-      }
-      var2p[icol]=(sum2-pow(sum3,2)/count[icol])/(count[icol]-1);
-    }
+    //size_t xvn = xv[0].size();
+    //for(size_t icol=0; icol<col_names.size();++icol){
+      //double m= sum[icol]/count[icol];
+      //mean[icol]= m;
+      //double sum2=0,sum3=0;
+      //for(size_t i=0;i<xvn;++i){
+        //sum2+=pow((xv[icol][i]-m),2);
+        //sum3+=(xv[icol][i]-m);
+      //}
+      //var2p[icol]=(sum2-pow(sum3,2)/count[icol])/(count[icol]-1);
+    //}
   }
 
   cout << "acc_name,"; for(size_t i=0; i<col_names.size();++i){
@@ -119,8 +119,8 @@ int main()
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
   cout << "var,"; for(size_t i=0; i<missing.size();++i){
-    cout << var2p[i];
-    //cout << m2[i]/count[i];
+    //cout << var2p[i];
+    cout << m2[i]/count[i];
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
 
