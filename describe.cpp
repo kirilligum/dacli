@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cfloat>
 #include <stdexcept>
+#include <algorithm>
 
 using namespace std;
 
@@ -32,24 +33,20 @@ int main()
   vector<size_t> nans(col_names.size(),0);
   vector<size_t> count(col_names.size(),0);
   vector<double> mean(col_names.size(),0);
-  vector<double> m2(col_names.size(),0);
-  vector<vector<double>> xv(col_names.size());
-  vector<double> var2p(col_names.size(),0);
   vector<double> sum(col_names.size(),0);
-  vector<int> min(col_names.size(),0);
-  vector<int> max(col_names.size(),0);
+  vector<double> sum2(col_names.size(),0);
+  vector<double> min(col_names.size());
+  vector<double> max(col_names.size());
   vector<size_t> q(col_names.size(),0);
   vector<size_t> q_old(col_names.size(),0);
+  bool first_line_not_read =1;
   for(string line;getline(cin,line);){
     istringstream issl(line);
     string idx; getline(issl,idx,',');///> skip the first field since it's id
     size_t icol =0;
-    //for(auto& i :missing) i++;
     for(string tok;getline(issl,tok,','); ){
-      //count[icol]++;
       double x;
       if(!tok.empty()){
-        //missing[icol]--;
         try {
           x = stod(tok);
         } catch (const std::invalid_argument&) {
@@ -60,12 +57,17 @@ int main()
           throw;
         }
         if(std::isfinite(x)){
+          if(first_line_not_read){
+            min[icol]=x;
+            max[icol]=x;
+            first_line_not_read=0;
+          }else{
+            if(x<min[icol]) min[icol]=x;
+            if(x>max[icol]) max[icol]=x;
+          }
           count[icol]++;
-          //sum[icol]+=x;
-          double delta = x - mean[icol];
-          mean[icol]=mean[icol]+delta/count[icol];
-          m2[icol] += delta*(x-mean[icol]);
-          //xv[icol].push_back(x);
+          sum[icol]+=x;
+          sum2[icol]+=x*x;
         }
         else if(std::isinf(x))
           infs[icol]++;
@@ -78,49 +80,53 @@ int main()
       }
       ++icol;
     }
-    ///
-    /// second pass of two-pass . turned out to be too slow
-    ///
-    //size_t xvn = xv[0].size();
-    //for(size_t icol=0; icol<col_names.size();++icol){
-      //double m= sum[icol]/count[icol];
-      //mean[icol]= m;
-      //double sum2=0,sum3=0;
-      //for(size_t i=0;i<xvn;++i){
-        //sum2+=pow((xv[icol][i]-m),2);
-        //sum3+=(xv[icol][i]-m);
-      //}
-      //var2p[icol]=(sum2-pow(sum3,2)/count[icol])/(count[icol]-1);
-    //}
   }
 
   cout << "acc_name,"; for(size_t i=0; i<col_names.size();++i){
     cout << col_names[i];
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
-  cout << "missing,"; for(size_t i=0; i<missing.size();++i){
-    cout << missing[i];
-    if(i!=col_names.size()-1) cout << ',';
-  } cout << endl;
-  cout << "infs,"; for(size_t i=0; i<missing.size();++i){
-    cout << infs[i];
-    if(i!=col_names.size()-1) cout << ',';
-  } cout << endl;
-  cout << "nans,"; for(size_t i=0; i<missing.size();++i){
-    cout << nans[i];
-    if(i!=col_names.size()-1) cout << ',';
-  } cout << endl;
+  if(none_of(begin(missing),end(missing),[](auto m){return m==0?1:0;})){
+    cout << "missing,"; for(size_t i=0; i<missing.size();++i){
+      cout << missing[i];
+      if(i!=col_names.size()-1) cout << ',';
+    } cout << endl;
+  }
+  if(none_of(begin(infs),end(infs),[](auto m){return m==0?1:0;})){
+    cout << "infs,"; for(size_t i=0; i<infs.size();++i){
+      cout << infs[i];
+      if(i!=col_names.size()-1) cout << ',';
+    } cout << endl;
+  }
+  if(none_of(begin(nans),end(nans),[](auto m){return m==0?1:0;})){
+    cout << "nans,"; for(size_t i=0; i<nans.size();++i){
+      cout << nans[i];
+      if(i!=col_names.size()-1) cout << ',';
+    } cout << endl;
+  }
   cout << "count,"; for(size_t i=0; i<missing.size();++i){
     cout << count[i];
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
   cout << "mean,"; for(size_t i=0; i<missing.size();++i){
-    cout << mean[i];
+    cout << sum[i]/count[i];
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
-  cout << "var,"; for(size_t i=0; i<missing.size();++i){
-    //cout << var2p[i];
-    cout << m2[i]/count[i];
+  cout << "std,"; for(size_t i=0; i<missing.size();++i){
+    double n = count[i];
+    double k = sum[i]/n;
+    double sums = sum[i]-n*k;
+    double sum2s = sum2[i] -2.0*k*sum[i]+n*k*k;
+    cout << sqrt((sum2s - (sums*sums)/n)/(n-1));
+    //cout << sqrt(m2[i]/count[i]);
+    if(i!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  cout << "min,"; for(size_t i=0; i<missing.size();++i){
+    cout << min[i];
+    if(i!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  cout << "max,"; for(size_t i=0; i<missing.size();++i){
+    cout << max[i];
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
 
