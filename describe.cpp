@@ -33,8 +33,14 @@ int main()
   vector<size_t> nans(col_names.size(),0);
   vector<size_t> count(col_names.size(),0);
   vector<double> mean(col_names.size(),0);
+  vector<double> std(col_names.size(),0);
+  vector<double> var(col_names.size(),0);
+  vector<double> ske(col_names.size(),0);
+  vector<double> kur(col_names.size(),0);
   vector<double> sum(col_names.size(),0);
   vector<double> sum2(col_names.size(),0);
+  vector<double> sum3(col_names.size(),0);
+  vector<double> sum4(col_names.size(),0);
   vector<double> min(col_names.size());
   vector<double> max(col_names.size());
   vector<size_t> q(col_names.size(),0);
@@ -67,7 +73,10 @@ int main()
           }
           count[icol]++;
           sum[icol]+=x;
-          sum2[icol]+=x*x;
+          double x2=x*x;
+          sum2[icol]+=x2;
+          sum3[icol]+=x2*x;
+          sum4[icol]+=x2*x2;
         }
         else if(std::isinf(x))
           infs[icol]++;
@@ -80,6 +89,39 @@ int main()
       }
       ++icol;
     }
+  }
+  for(size_t i=0; i<missing.size();++i){
+    double n = count[i];
+    double k = sum[i]/n,k2=k*k,k3=k2*k,k4=k2*k2;
+    mean[i] = k;
+    double sum1s = sum[i]-n*k;
+    double sum2s = sum2[i] -2.0*k*sum[i] +n*k2;
+    double sum3s = sum3[i] -3*k*sum2[i] +3*k2*sum[i] -n*k3;
+    double sum4s = sum4[i] -4*k*sum3[i] +6*k2*sum2[i] -4*k3*sum[i] +n*k4;
+    //double sum1s = sum[i];
+    //double sum2s = sum2[i];
+    //double sum3s = sum3[i];
+    //double sum4s = sum4[i];
+    double m1 = sum1s/n, m12=m1*m1, m13=m12*m1,m14=m12*m12;
+    double m2 = sum2s/n;
+    double m3 = sum3s/n;
+    double m4 = sum4s/n;
+    double variance = m2-m12;
+    //double variance = m2-k2;
+    //double sample_variance = variance*n/(n-1);
+    var[i] = variance;
+    double stdev = sqrt(variance);
+    //double sample_stdev = sqrt((sum2s - sum1s*k)/(n-1));
+    std[i] = stdev;
+    double skewness = (m3 -3*m1*m2 +2*m13)/(variance*stdev);
+    //double skewness = (sum3s/n -3*k*sum2s/n +2*k3)/((sum2s/n-k2)*sqrt(sum2s/n-k2));
+    //double skewness = (sum3s/n -3*k*variance -k3)/(variance*stdev);
+    //double skew_bias = sqrt(pow((n-1)/n,3));
+    //double sample_skewness = skewness*skew_bias;
+    ske[i] = skewness;
+    double kurtosis = (m4 -4*m1*m3 +6*m12*m2 -3*m14)/(variance*variance)-3;
+    //double kurtosis = (sum4s/n -4*k*variance*stdev +6*k2*variance -4*k3*stdev +k4)/(variance*variance)-3;
+    kur[i] = kurtosis;
   }
 
   cout << "acc_name,"; for(size_t i=0; i<col_names.size();++i){
@@ -109,16 +151,31 @@ int main()
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
   cout << "mean,"; for(size_t i=0; i<missing.size();++i){
-    cout << sum[i]/count[i];
+    cout << mean[i];
+    if(i!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  cout << "m2,"; for(size_t i=0; i<missing.size();++i){
+    cout << sum2[i]/count[i];
+    if(i!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  cout << "m3,"; for(size_t i=0; i<missing.size();++i){
+    cout << sum3[i]/count[i];
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
   cout << "std,"; for(size_t i=0; i<missing.size();++i){
-    double n = count[i];
-    double k = sum[i]/n;
-    double sums = sum[i]-n*k;
-    double sum2s = sum2[i] -2.0*k*sum[i]+n*k*k;
-    cout << sqrt((sum2s - (sums*sums)/n)/(n-1));
-    //cout << sqrt(m2[i]/count[i]);
+    cout << std[i];
+    if(i!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  cout << "var,"; for(size_t i=0; i<missing.size();++i){
+    cout << var[i];
+    if(i!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  cout << "ske,"; for(size_t i=0; i<missing.size();++i){
+    cout << ske[i];
+    if(i!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  cout << "kur,"; for(size_t i=0; i<missing.size();++i){
+    cout << kur[i];
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
   cout << "min,"; for(size_t i=0; i<missing.size();++i){
