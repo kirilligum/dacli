@@ -1,14 +1,13 @@
 dacli
 ======
 
-dacli (Data Analysis Command Line Interface) is a set of high performance tools to analyse data in the simplest way -- by piping commands to each other in a command line. 
+dacli (Data Analysis Command Line Interface) is a set of high performance tools to analyse data in the simplest way -- by piping commands within a command line. 
 
 # Why:
-- **no learning curve**  -- use linux instead of learning new environments and languages, such as python/pandas, R, Octave, Matlab, ...
-- **tired of waiting?** profiler-optimizaed cache-aware C++ and automatic switching between the latest algorithms; even avoiding expensive operations, such as division. Faster than numpy, matlab, R, ...
-- **really big data?** --  one-pass online algorithms that minimize I/O and don't crush due to lack of memory, parallel reading and computing, and convinient for clusters' scheduling
-- **prototype quickly** = streams and component programming by using pipes `|` for intuitive work flow + less typing + leverage cli tools that you already know
-
+- **no learning curve**  -- use linux instead of learning new environments and languages.
+- **tired of waiting?** profiler-optimizaed cache-aware C++ and automatic switching between the latest algorithms. Faster than numpy, matlab, R, ...
+- **really big data?** --  one-pass online algorithms that minimize I/O and don't crush due to lack of memory, parallel reading and computing, and convenient to schedule on a clusters.
+- **prototype quickly** = intuitive work flow + less typing + leverage cli tools that you already know. Simply pipe '|' once command into another and don't worry about compatibility or control-flow.
 
 # Tools:
 
@@ -29,6 +28,10 @@ dacli (Data Analysis Command Line Interface) is a set of high performance tools 
     2    -21   1.3  0    43     4
     3    0.98  8.1  -34  .0923  1
     545  98    112  43   65     23
+
+**describe** -- mean, variance, quantiles, histogram, and other descriptive statistics using big-data-friendly algorithms  that read data only once, scale linear and use constant memory.
+
+    > cat test.csv| ./describe |column -ts,
 
 **transpose** -- transposes the table. it simply swaps rows and columns
 
