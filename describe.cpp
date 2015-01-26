@@ -206,13 +206,13 @@ int main()
           //      combine each two bins into one.
           //  print out all bins or spline the beans and divide the spline to get approximate bins
           //  Note: to do spline use much 3x more bins
-          if (count[icol]<buffer_size+1){///> count starts from 0, there fore +1
+          if (count[icol]<buffer_size+1){///> count starts from 0, therefore +1
             buffer[icol].push_back(x); ///> fill buffer
-            if(count[icol]==buffer_size+1-1){ ///> full buffer --> build bins
+            if(count[icol]==buffer_size){ ///> full buffer --> build bins
               auto mmp = std::minmax_element(begin(buffer[icol]),end(buffer[icol]));
-              bin_size = (*mmp.second-*mmp.first)/(whist[icol].size()-1);///> bin_size*bi will be smaller than buffer. therefore, we divide by (bi-1)
-              for(size_t i=0; i<whist[icol].size(); ++i) {///> create bins
-                binloc[icol][i]=*mmp.first + i*bin_size;
+              bin_size = (*mmp.second-*mmp.first)/(bi);
+              for(size_t i=0; i<bi; ++i) {///> create bins
+                binloc[icol][i]=*mmp.first + (i+1)*bin_size;///> ends of the bins are stored
               }
               for(size_t ibuf=0; ibuf<buffer_size; ++ibuf) {///> fill bins
                 auto it = std::lower_bound( binloc[icol].begin() , binloc[icol].end() , buffer[icol][ibuf]);
@@ -223,22 +223,24 @@ int main()
               //cout << std::accumulate(begin(whist[icol]),end(whist[icol]),0) << endl;
             }
           }else{
-            if(x<binloc[icol].front()){
+            if(x<=binloc[icol].front()-bin_size){
               //cout << "add front " << binloc[icol].front() << " " << bin_size << endl;
-              while(x<binloc[icol].front()){
+              while(x<=binloc[icol].front()-bin_size){
                 binloc[icol].push_front(binloc[icol].front()-bin_size);
                 whist[icol].push_front(0);
               }
               whist[icol].front()=1;
-            }else if(binloc[icol].back()+bin_size<x) {
+            }else if(binloc[icol].back()<x) {
               //cout << "add back " << binloc[icol].back() << " " << bin_size << endl;
-              while(binloc[icol].back()+bin_size<x) {
+              while(binloc[icol].back()<x) {
                 binloc[icol].push_back(binloc[icol].back()+bin_size);
                 whist[icol].push_back(0);
               }
               whist[icol].back()=1;
             }else{
+              for(auto i: binloc[icol]) cout << i << " "; cout << endl;
               auto it = std::lower_bound( binloc[icol].begin() , binloc[icol].end() , x);
+              cout << "lower_bound: " << *it << "  x= " << x<< endl;
               ++whist[icol][std::distance(binloc[icol].begin(), it)];
             }
             cout << "x = " << x << endl;
@@ -246,12 +248,20 @@ int main()
             for(auto i: whist[icol]) cout << i << " "; cout << endl;
             cout << std::accumulate(begin(whist[icol]),end(whist[icol]),0) << endl;
             cout << binloc[icol].size() << "_";
-            if(binloc[icol].size()>=bl){///> combine bins since number of bins doubled
-              deque<double> tmp_binloc(bi);
-              deque<size_t> tmp_whist(bi);
-              for(size_t i=0; i< bi;++i){
-                tmp_binloc[i]=binloc[icol][2*i];
-                tmp_whist[i]=whist[icol][2*i]+whist[icol][2*i+1];
+            cout<< count[icol]<<"_";
+            while(binloc[icol].size()>=bl){///> combine bins since number of bins doubled
+              deque<double> tmp_binloc;
+              deque<size_t> tmp_whist;
+              for(size_t i=0; i+1< binloc[icol].size();++(++i)){
+                tmp_binloc.push_back(binloc[icol][i+1]);
+                tmp_whist.push_back(whist[icol][i]+whist[icol][i+1]);
+              }
+              if(tmp_binloc.size()*2==binloc[icol].size()-1){
+                tmp_binloc.push_back(binloc[icol].back()+bin_size);
+                tmp_whist.push_back(whist[icol].back());
+              }else if(tmp_binloc.size()*2==binloc[icol].size()){
+              }else{
+                cout << "error: sizes of bins during combining don't match\n";
               }
               swap(tmp_binloc,binloc[icol]);
               swap(tmp_whist,whist[icol]);
@@ -344,11 +354,10 @@ int main()
     //  get needed locations of histograms
     //  get middle of histograms
     //  get the locations from the spline.
-    //  TODO
     double bin_size_div_2 = (binloc[i][1]-binloc[i][0])*0.5;
     vector<double>mbinloc;
-    mbinloc.push_back(binloc[i].front()-bin_size_div_2);
-    for(auto j: binloc[i]) mbinloc.push_back(j+bin_size_div_2);
+    mbinloc.push_back(binloc[i].front()-3*bin_size_div_2);
+    for(auto j: binloc[i]) mbinloc.push_back(j-bin_size_div_2);
     mbinloc.push_back(mbinloc.back()+2*bin_size_div_2);
     vector<double> wshist;
     wshist.push_back(0.0);
@@ -358,24 +367,23 @@ int main()
     cout << "s( " << mbinloc.size() << "  " << wshist.size() <<")\n";
     for(auto j: mbinloc) cout << j << "  "; cout << endl;
     for(auto j: wshist) cout << j << "  "; cout << endl;
-    //s.set_points(mbinloc,wshist);
-    //double final_bin_size= (max[i]-min[i])/bins;
-    //cout << " final_bin_size: " << final_bin_size << endl;
-    //histloc[i][0]=min[i]+final_bin_size*0.5;
-    //hist[i][0]=s(static_cast<double>(histloc[i][0]));
-    //for(size_t j=1;j<bins;++j) {
-      //histloc[i][j]=histloc[i][j-1]+final_bin_size;
-      //hist[i][j]=s(static_cast<double>(histloc[i][j]));
-    //}
-    //for(size_t j=0;j<bins;++j) {
-      //cout << histloc[i][j] << "_" << hist[i][j]<< "   ";
-    //}
-    //cout << endl;
+    s.set_points(mbinloc,wshist);
+    double final_bin_size= (max[i]-min[i])/bins;
+    cout << " final_bin_size: " << final_bin_size << endl;
+    histloc[i][0]=min[i]+final_bin_size*0.5;
+    hist[i][0]=s(static_cast<double>(histloc[i][0]));
+    for(size_t j=1;j<bins;++j) {
+      histloc[i][j]=histloc[i][j-1]+final_bin_size;
+      hist[i][j]=s(static_cast<double>(histloc[i][j]));
+    }
+    for(size_t j=0;j<bins;++j) {
+      cout << histloc[i][j] << "_" << hist[i][j]<< "   ";
+    }
+    cout << endl;
             for(auto j: binloc[i]) cout << j << " "; cout << endl;
             std::adjacent_difference(begin(binloc[i]),end(binloc[i]),std::ostream_iterator<double>(cout," ")); cout << endl;
             for(auto j: whist[i]) cout << j << " "; cout << endl;
             cout << std::accumulate(begin(whist[i]),end(whist[i]),0) << endl;
-            cout << binloc[i].size() << "_";
     ///
     /// hist done
     ///
