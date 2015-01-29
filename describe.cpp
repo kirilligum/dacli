@@ -10,6 +10,7 @@
 #include <cfloat>
 #include <stdexcept>
 #include <algorithm>
+#include <numeric>
 #include "spline.h"
 
 using namespace std;
@@ -122,12 +123,38 @@ int main()
           ///
           std::size_t cnt = count[icol];
           // first accumulate num_markers samples
-          if(cnt <= num_markers) {
-            heights[icol][cnt - 1] = x;
-            // complete the initialization of heights[icol] by sorting
-            if(cnt == num_markers) {
-              std::sort(heights[icol].begin(), heights[icol].end());
+          if (cnt<buffer_size+1){///> count starts from 0, therefore +1
+            buffer[icol].push_back(x); ///> fill buffer
+          }
+          if(cnt==buffer_size){ ///> full buffer --> build bins
+            /// p2 quantiles::
+            //size_t iqp = 0;
+            for(size_t im=1; im<probabilities.size()-1;++im){
+              auto iq = static_cast<size_t>(probabilities[im]*cnt);
+              std::nth_element(begin(buffer[icol]),begin(buffer[icol])+iq,end(buffer[icol]));
+              actual_positions[icol][im]=iq;
+              desired_positions[icol][im]=iq;
+              heights[icol][im]= buffer[icol][iq];
+              //heights[icol][im]= std::accumulate(begin(buffer[icol])+iqp,begin(buffer[icol])+iq,heights[icol][im-1]);
+              //iqp=iq;
             }
+            /// hist:
+            auto mmp = std::minmax_element(begin(buffer[icol]),end(buffer[icol]));
+            bin_size = (*mmp.second-*mmp.first)/(bi);
+            for(size_t i=0; i<bi; ++i) {///> create bins
+              binloc[icol][i]=*mmp.first + (i+1)*bin_size;///> ends of the bins are stored
+            }
+            for(size_t ibuf=0; ibuf<buffer_size; ++ibuf) {///> fill bins
+              auto it = std::lower_bound( binloc[icol].begin() , binloc[icol].end() , buffer[icol][ibuf]);
+              ++whist[icol][std::distance(binloc[icol].begin(), it)];
+            }
+            //vector<double>().swap(buffer[icol]);///> clear space for the buffer
+          //if(cnt <= num_markers) {
+            //heights[icol][cnt - 1] = x;
+            //// complete the initialization of heights[icol] by sorting
+            //if(cnt == num_markers) {
+              //std::sort(heights[icol].begin(), heights[icol].end());
+            //}
           } else {
             std::size_t sample_cell = 1;
             // find cell k = sample_cell such that heights[icol][k-1] <= sample < heights[icol][k]
@@ -195,20 +222,11 @@ int main()
           /// hist
           ///
           //Algorithm:
-          //  fills up initial histogram by using buffer or initial elements
-          //    push x
-          //    scan for min and max
-          //    create bins
-          //    fills the bins
-          //  add a new element or another buffer of elements
-          //    add new bins of the same size in the beginning or the end so that a new element fits in
-          //    if number of bins is double of initial number of bins
           //      combine each two bins into one.
-          //  print out all bins or spline the beans and divide the spline to get approximate bins
           //  Note: to do spline use much 3x more bins
-          if (count[icol]<buffer_size+1){///> count starts from 0, therefore +1
+          if (cnt<buffer_size+1){///> fills up initial histogram by using buffer or initial elements (count starts from 0, therefore +1)
             buffer[icol].push_back(x); ///> fill buffer
-            if(count[icol]==buffer_size){ ///> full buffer --> build bins
+            if(cnt==buffer_size){ ///> full buffer --> build bins
               auto mmp = std::minmax_element(begin(buffer[icol]),end(buffer[icol]));
               bin_size = (*mmp.second-*mmp.first)/(bi);
               for(size_t i=0; i<bi; ++i) {///> create bins
@@ -218,38 +236,25 @@ int main()
                 auto it = std::lower_bound( binloc[icol].begin() , binloc[icol].end() , buffer[icol][ibuf]);
                 ++whist[icol][std::distance(binloc[icol].begin(), it)];
               }
-              //for(auto i: binloc[icol]) cout << i << " "; cout << endl;
-              //for(auto i: whist[icol]) cout << i << " "; cout << endl;
-              //cout << std::accumulate(begin(whist[icol]),end(whist[icol]),0) << endl;
             }
-          }else{
-            if(x<=binloc[icol].front()-bin_size){
-              //cout << "add front " << binloc[icol].front() << " " << bin_size << endl;
+          }else{ ///>  add a new element or another buffer of elements
+            if(x<=binloc[icol].front()-bin_size){ ///>    add new bins of the same size in the beginning or the end so that a new element fits in
               while(x<=binloc[icol].front()-bin_size){
                 binloc[icol].push_front(binloc[icol].front()-bin_size);
                 whist[icol].push_front(0);
               }
               whist[icol].front()=1;
             }else if(binloc[icol].back()<x) {
-              //cout << "add back " << binloc[icol].back() << " " << bin_size << endl;
               while(binloc[icol].back()<x) {
                 binloc[icol].push_back(binloc[icol].back()+bin_size);
                 whist[icol].push_back(0);
               }
               whist[icol].back()=1;
             }else{
-              for(auto i: binloc[icol]) cout << i << " "; cout << endl;
               auto it = std::lower_bound( binloc[icol].begin() , binloc[icol].end() , x);
-              cout << "lower_bound: " << *it << "  x= " << x<< endl;
               ++whist[icol][std::distance(binloc[icol].begin(), it)];
             }
-            cout << "x = " << x << endl;
-            for(auto i: binloc[icol]) cout << i << " "; cout << endl;
-            for(auto i: whist[icol]) cout << i << " "; cout << endl;
-            cout << std::accumulate(begin(whist[icol]),end(whist[icol]),0) << endl;
-            cout << binloc[icol].size() << "_";
-            cout<< count[icol]<<"_";
-            while(binloc[icol].size()>=bl){///> combine bins since number of bins doubled
+            while(binloc[icol].size()>=bl){///> combine bins when number of bins doubled
               deque<double> tmp_binloc;
               deque<size_t> tmp_whist;
               for(size_t i=0; i+1< binloc[icol].size();++(++i)){
@@ -267,8 +272,6 @@ int main()
               swap(tmp_whist,whist[icol]);
               bin_size*=2;
             }
-            cout << binloc[icol].size() << "  ";
-            cout << endl;
           }
           ///
           /// hist end
@@ -348,12 +351,6 @@ int main()
     ///
     /// hist --- make splines  and get an average histogram
     ///
-    // Algorithm:
-    //  create vector of middle positions of histograms --X and height of hist --y
-    //  load the vector into a spline
-    //  get needed locations of histograms
-    //  get middle of histograms
-    //  get the locations from the spline.
     double bin_size_div_2 = (binloc[i][1]-binloc[i][0])*0.5;
     vector<double>mbinloc;
     mbinloc.push_back(binloc[i].front()-3*bin_size_div_2);
@@ -363,7 +360,7 @@ int main()
     wshist.push_back(0.0);
     for(auto j:whist[i]) wshist.push_back(j);
     wshist.push_back(0.0);
-    tk::spline s;
+    tk::spline s; //  print out all bins or spline the beans and divide the spline to get approximate bins
     cout << "s( " << mbinloc.size() << "  " << wshist.size() <<")\n";
     for(auto j: mbinloc) cout << j << "  "; cout << endl;
     for(auto j: wshist) cout << j << "  "; cout << endl;
