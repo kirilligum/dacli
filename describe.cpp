@@ -18,19 +18,27 @@ using namespace std;
 class counter{
   typedef unsigned short counter_type;
   protected:
-    vector<counter_type> cv;
   public:
-    counter():cv{0},max{0.0}{}
+    vector<counter_type> c;
+    //counter():c{0},max{sizeof(c[0])}{}
+    counter():c{0},max{(pow(2,8*sizeof(c[0])))}{}
     void increment(){
-      cv[0]++;
-      for(size_t i=1;cv[i-1]==0;++i){
-        cv[i]++;
-        if(i==cv.size())
-          cv.push_back(1);
+      c[0]++;
+      //if(max==0.0&&c[0]==0){
+        //max=static_cast<unsigned short>(c[0]-1);
+      //}
+      for(size_t i=1;c[i-1]==0;++i){
+        c[i]++;
+        if(i==c.size())
+          c.push_back(1);
       }
     }
-    vector<counter_type> show(){
-      return cv;
+    vector<counter_type> value(){
+      return c;
+    }
+    double doub(){
+      //return pow(2,8*sizeof(c[0]))*c[1]+c[0];
+      return max*c[1]+c[0];
     }
     double max;
 };
@@ -48,11 +56,16 @@ auto read_header(T& in) {
 int main()
 {
   counter cntr;
-  for(double id=0.0;id<1e10;++id){
+  double dcnt=0.0;
+  for(double id=0.0;id<1e8;++id){
     cntr.increment();
+    dcnt++;
   }
-  for(auto i:cntr.show()) cout << i<< " ";
-  cout << endl;
+  for(auto i:cntr.value()) cout << i<< " "; cout << endl;
+  cout << "dou=b(cntr): " << cntr.doub() << endl;
+  cout << "dcnt: " << dcnt<<endl;
+  cout << pow(2,8*2)*cntr.c[1]+cntr.c[0] << endl;
+  cout << cntr.max<< endl;
 
   cin.sync_with_stdio(false);
   auto col_names = read_header(cin);
