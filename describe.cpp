@@ -20,7 +20,7 @@ class counter{
   protected:
     vector<counter_type> cv;
   public:
-    counter():cv{0}{}
+    counter():cv{0},max{0.0}{}
     void increment(){
       cv[0]++;
       for(size_t i=1;cv[i-1]==0;++i){
@@ -32,6 +32,7 @@ class counter{
     vector<counter_type> show(){
       return cv;
     }
+    double max;
 };
 
 template<typename T>
