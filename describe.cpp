@@ -15,30 +15,28 @@
 
 using namespace std;
 
+template<typename C>
 class counter{
-  typedef unsigned short counter_type;
-  protected:
   public:
-    vector<counter_type> c;
-    //counter():c{0},max{sizeof(c[0])}{}
+    vector<C> c;
     counter():c{0},max{(pow(2,8*sizeof(c[0])))}{}
     void increment(){
       c[0]++;
-      //if(max==0.0&&c[0]==0){
-        //max=static_cast<unsigned short>(c[0]-1);
-      //}
       for(size_t i=1;c[i-1]==0;++i){
         c[i]++;
         if(i==c.size())
           c.push_back(1);
       }
     }
-    vector<counter_type> value(){
+    vector<C> value(){
       return c;
     }
-    double doub(){
-      //return pow(2,8*sizeof(c[0]))*c[1]+c[0];
-      return max*c[1]+c[0];
+    double double_value(){
+      double x=0.0;
+      for(size_t i=0;i<c.size();++i){
+        x+=static_cast<double>(c[i])*pow(max,i);
+      }
+      return x;
     }
     double max;
 };
@@ -55,27 +53,30 @@ auto read_header(T& in) {
 
 int main()
 {
-  counter cntr;
+  counter<unsigned __int128> cntr;
   double dcnt=0.0;
   for(double id=0.0;id<1e8;++id){
     cntr.increment();
     dcnt++;
   }
-  for(auto i:cntr.value()) cout << i<< " "; cout << endl;
-  cout << "dou=b(cntr): " << cntr.doub() << endl;
+  cout << "sizeof " << sizeof(cntr.value()[0]) << endl;
+  for(auto i:cntr.value()) cout << static_cast<size_t>(i)<< " "; cout << endl;
+  cout << "for doub " ;for(auto i:cntr.value()) cout << static_cast<double>(i)<< " "; cout << endl;
+  cout << "dou=b(cntr): " << cntr.double_value() << endl;
   cout << "dcnt: " << dcnt<<endl;
-  cout << pow(2,8*2)*cntr.c[1]+cntr.c[0] << endl;
+  //cout << pow(2,8*2)*cntr.c[1]+cntr.c[0] << endl;
   cout << cntr.max<< endl;
 
   cin.sync_with_stdio(false);
   auto col_names = read_header(cin);
 
   //// by default, display (based on pandas describe) count, mean, std, min, 25, 50, 75th precentile, and max for each column excluding NaN. output number of nans and missing values.
-  typedef size_t  count_type;
-  vector<count_type> missing(col_names.size(),0);
-  vector<count_type> infs(col_names.size(),0);
-  vector<count_type> nans(col_names.size(),0);
-  vector<count_type> count(col_names.size(),0);
+  typedef counter<unsigned __int128>  count_type;
+  //typedef size_t  count_type;
+  vector<count_type> missing(col_names.size(),count_type());
+  vector<count_type> infs(col_names.size(),count_type());
+  vector<count_type> nans(col_names.size(),count_type());
+  vector<count_type> count(col_names.size(),count_type());
   vector<vector<double>> xv(col_names.size());
   vector<double> mean(col_names.size(),0);
   vector<double> std(col_names.size(),0);
@@ -118,7 +119,7 @@ int main()
   const size_t bins = 8;///> number of bins
   const size_t bi = 3*bins;///> initial number of bins
   const size_t bl = 2*bi;///> limiting  number of bins
-  const size_t buffer_size = bi*10000;
+  const size_t buffer_size = bi*10000;///> TODO if buffer size is larger than size_t return error
   double bin_size=0.0;
   vector<vector<double>> buffer(col_names.size()); ///> number of elements to buffer
   for(auto &i:buffer) i.reserve(buffer_size);
@@ -152,14 +153,15 @@ int main()
             if(x<min[icol]) min[icol]=x;
             if(x>max[icol]) max[icol]=x;
           }
-          count[icol]++;
+          count[icol].increment();
+          //count[icol]++;
           sum[icol]+=x;
           double x2=x*x;
           sum2[icol]+=x2;
           sum3[icol]+=x2*x;
           sum4[icol]+=x2*x2;
           //xv[icol].push_back(x);///> intropolate instead of p2
-          std::size_t cnt = count[icol];
+          std::size_t cnt = count[icol].value()[0];///> TODO put a check that sizeof(count_type)<buffer_size
           // first accumulate num_markers samples
           if (cnt<buffer_size+1){///> count starts from 0, therefore +1
             buffer[icol].push_back(x); ///> fill buffer
@@ -294,13 +296,14 @@ int main()
           ///
         }
         else if(std::isinf(x))
-          infs[icol]++;
+          infs[icol].increment();
+          //infs[icol]++;
         else if(std::isnan(x))
-          nans[icol]++;
+          nans[icol].increment();
         else
           cerr << "error: caticorization of input cell didn't work.\n";
       }else {
-        missing[icol]++;
+        missing[icol].increment();
       }
       ++icol;
     }
@@ -309,12 +312,12 @@ int main()
   vector<vector<double>> qhist_abs(col_names.size());
   vector<vector<size_t>> qhist_count(col_names.size());
   vector<vector<double>> acc_heights(col_names.size());
-  for(size_t icol=0; icol<missing.size();++icol){
-    if(count[icol]<buffer_size){ ///> full buffer --> build bins
+  for(size_t icol=0; icol<col_names.size();++icol){
+    if(static_cast<size_t>(count[icol].value()[0])<buffer_size){ ///> full buffer --> build bins
       /// p2 quantiles::
       //size_t iqp = 0;
       for(size_t im=1; im<probabilities.size()-1;++im){
-        auto iq = static_cast<size_t>(probabilities[im]*count[icol]);
+        auto iq = static_cast<size_t>(probabilities[im]*count[icol].value()[0]);
         std::nth_element(begin(buffer[icol]),begin(buffer[icol])+iq,end(buffer[icol]));
         actual_positions[icol][im]=iq;
         desired_positions[icol][im]=iq;
@@ -334,7 +337,7 @@ int main()
       }
       vector<double>().swap(buffer[icol]);///> clear space for the buffer (checked on massif)
     }
-    double n = count[icol];
+    double n = count[icol].double_value();
     double k = sum[icol]/n,k2=k*k,k3=k2*k,k4=k2*k2;
     mean[icol] = k;
     double sum1s = sum[icol]-n*k;
@@ -368,7 +371,7 @@ int main()
     for(auto i: qhist[icol]) qhist_abs[icol].push_back(i/diff_abs);
     double diff_rel = max[icol] - min[icol];
     //cout << diff_abs << "  " << diff_rel << "  " << count[icol] << endl;
-    for(auto i: qhist[icol]) qhist_count[icol].push_back(static_cast<size_t>(i/diff_rel*count[icol]));
+    for(auto i: qhist[icol]) qhist_count[icol].push_back(static_cast<size_t>(i/diff_rel*count[icol].double_value()));
     //const size_t qhist_plot_size=8*4;
     //for(size_t ih=0; ih<qhist_abs[0].size();++ih) {
       //cout << "qhist_"<<ih<<",";
@@ -440,7 +443,7 @@ int main()
       else if(j==heights[0].size()-1) cout << 1.0;
       else cout << probabilities[(j-1)/2];
       cout << ",";
-      for(size_t i=0; i<missing.size();++i){
+      for(size_t i=0; i<col_names.size();++i){
         //std::nth_element(begin(xv[i]),begin(xv[i])+xv[i].size()/2,end(xv[i]));
         //cout << xv[i][xv[i].size()/2];
         cout << heights[i][j];
@@ -452,7 +455,7 @@ int main()
       //else if(j==heights[0].size()-2) cout << (1.0+probabilities[(j-1)/2-1])/2;
       //else cout << (probabilities[(j-1)/2]+probabilities[(j-1)/2-1])/2;
       //cout << ",";
-      //for(size_t i=0; i<missing.size();++i){
+      //for(size_t i=0; i<col_names.size();++i){
         ////std::nth_element(begin(xv[i]),begin(xv[i])+xv[i].size()/2,end(xv[i]));
         ////cout << xv[i][xv[i].size()/2];
         //cout << heights[i][j];
@@ -465,61 +468,61 @@ int main()
     cout << col_names[i];
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
-  if(none_of(begin(missing),end(missing),[](auto m){return m==0?1:0;})){
+  if(none_of(begin(missing),end(missing),[](auto m){return m.value()[0]==0?1:0;})){
     cout << "missing,"; for(size_t i=0; i<missing.size();++i){
-      cout << missing[i];
+      cout << missing[i].double_value();
       if(i!=col_names.size()-1) cout << ',';
     } cout << endl;
   }
-  if(none_of(begin(infs),end(infs),[](auto m){return m==0?1:0;})){
+  if(none_of(begin(infs),end(infs),[](auto m){return m.value()[0]==0?1:0;})){
     cout << "infs,"; for(size_t i=0; i<infs.size();++i){
-      cout << infs[i];
+      cout << infs[i].double_value();
       if(i!=col_names.size()-1) cout << ',';
     } cout << endl;
   }
-  if(none_of(begin(nans),end(nans),[](auto m){return m==0?1:0;})){
+  if(none_of(begin(nans),end(nans),[](auto m){return m.value()[0]==0?1:0;})){
     cout << "nans,"; for(size_t i=0; i<nans.size();++i){
-      cout << nans[i];
+      cout << nans[i].double_value();
       if(i!=col_names.size()-1) cout << ',';
     } cout << endl;
   }
-  cout << "count,"; for(size_t i=0; i<missing.size();++i){
-    cout << count[i];
+  cout << "count,"; for(size_t i=0; i<col_names.size();++i){
+    cout << count[i].double_value();
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
-  //cout << "mean,"; for(size_t i=0; i<missing.size();++i){
+  //cout << "mean,"; for(size_t i=0; i<col_names.size();++i){
     //cout << mean[i];
     //if(i!=col_names.size()-1) cout << ',';
   //} cout << endl;
-  //cout << "m2,"; for(size_t i=0; i<missing.size();++i){
+  //cout << "m2,"; for(size_t i=0; i<col_names.size();++i){
     //cout << sum2[i]/count[i];
     //if(i!=col_names.size()-1) cout << ',';
   //} cout << endl;
-  //cout << "m3,"; for(size_t i=0; i<missing.size();++i){
+  //cout << "m3,"; for(size_t i=0; i<col_names.size();++i){
     //cout << sum3[i]/count[i];
     //if(i!=col_names.size()-1) cout << ',';
   //} cout << endl;
-  //cout << "std,"; for(size_t i=0; i<missing.size();++i){
+  //cout << "std,"; for(size_t i=0; i<col_names.size();++i){
     //cout << std[i];
     //if(i!=col_names.size()-1) cout << ',';
   //} cout << endl;
-  //cout << "var,"; for(size_t i=0; i<missing.size();++i){
+  //cout << "var,"; for(size_t i=0; i<col_names.size();++i){
     //cout << var[i];
     //if(i!=col_names.size()-1) cout << ',';
   //} cout << endl;
-  //cout << "ske,"; for(size_t i=0; i<missing.size();++i){
+  //cout << "ske,"; for(size_t i=0; i<col_names.size();++i){
     //cout << ske[i];
     //if(i!=col_names.size()-1) cout << ',';
   //} cout << endl;
-  //cout << "kur,"; for(size_t i=0; i<missing.size();++i){
+  //cout << "kur,"; for(size_t i=0; i<col_names.size();++i){
     //cout << kur[i];
     //if(i!=col_names.size()-1) cout << ',';
   //} cout << endl;
-  cout << "min,"; for(size_t i=0; i<missing.size();++i){
+  cout << "min,"; for(size_t i=0; i<col_names.size();++i){
     cout << min[i];
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
-  //cout << "25%,"; for(size_t i=0; i<missing.size();++i){
+  //cout << "25%,"; for(size_t i=0; i<col_names.size();++i){
     //cout << heights[i][1];
     //if(i!=col_names.size()-1) cout << ',';
   //} cout << endl;
@@ -530,7 +533,7 @@ int main()
       //else if(j==heights[0].size()-1) cout << 1.0;
       //else cout << probabilities[(j-1)/2];
       //cout << ",";
-      //for(size_t i=0; i<missing.size();++i){
+      //for(size_t i=0; i<col_names.size();++i){
         ////std::nth_element(begin(xv[i]),begin(xv[i])+xv[i].size()/2,end(xv[i]));
         ////cout << xv[i][xv[i].size()/2];
         //cout << heights[i][j];
@@ -542,7 +545,7 @@ int main()
       ////else if(j==heights[0].size()-2) cout << (1.0+probabilities[(j-1)/2-1])/2;
       ////else cout << (probabilities[(j-1)/2]+probabilities[(j-1)/2-1])/2;
       ////cout << ",";
-      ////for(size_t i=0; i<missing.size();++i){
+      ////for(size_t i=0; i<col_names.size();++i){
         //////std::nth_element(begin(xv[i]),begin(xv[i])+xv[i].size()/2,end(xv[i]));
         //////cout << xv[i][xv[i].size()/2];
         ////cout << heights[i][j];
@@ -550,17 +553,17 @@ int main()
       ////} cout << endl;
     //}
   //}
-  //cout << "50%,"; for(size_t i=0; i<missing.size();++i){
+  //cout << "50%,"; for(size_t i=0; i<col_names.size();++i){
     ////std::nth_element(begin(xv[i]),begin(xv[i])+xv[i].size()/2,end(xv[i]));
     ////cout << xv[i][xv[i].size()/2];
     //cout << heights[i][2];
     //if(i!=col_names.size()-1) cout << ',';
   //} cout << endl;
-  //cout << "75%,"; for(size_t i=0; i<missing.size();++i){
+  //cout << "75%,"; for(size_t i=0; i<col_names.size();++i){
     //cout << heights[i][3];
     //if(i!=col_names.size()-1) cout << ',';
   //} cout << endl;
-  cout << "max,"; for(size_t i=0; i<missing.size();++i){
+  cout << "max,"; for(size_t i=0; i<col_names.size();++i){
     cout << max[i];
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
