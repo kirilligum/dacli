@@ -53,20 +53,6 @@ auto read_header(T& in) {
 
 int main()
 {
-  counter<unsigned __int128> cntr;
-  double dcnt=0.0;
-  for(double id=0.0;id<1e8;++id){
-    cntr.increment();
-    dcnt++;
-  }
-  cout << "sizeof " << sizeof(cntr.value()[0]) << endl;
-  for(auto i:cntr.value()) cout << static_cast<size_t>(i)<< " "; cout << endl;
-  cout << "for doub " ;for(auto i:cntr.value()) cout << static_cast<double>(i)<< " "; cout << endl;
-  cout << "dou=b(cntr): " << cntr.double_value() << endl;
-  cout << "dcnt: " << dcnt<<endl;
-  //cout << pow(2,8*2)*cntr.c[1]+cntr.c[0] << endl;
-  cout << cntr.max<< endl;
-
   cin.sync_with_stdio(false);
   auto col_names = read_header(cin);
 
@@ -77,7 +63,7 @@ int main()
   vector<count_type> infs(col_names.size(),count_type());
   vector<count_type> nans(col_names.size(),count_type());
   vector<count_type> count(col_names.size(),count_type());
-  vector<vector<double>> xv(col_names.size());
+  //vector<vector<double>> xv(col_names.size());
   vector<double> mean(col_names.size(),0);
   vector<double> std(col_names.size(),0);
   vector<double> var(col_names.size(),0);
@@ -92,7 +78,7 @@ int main()
   //const double p=0.5;
   const size_t num_quantiles =3;
   const size_t num_markers = num_quantiles*2+3;
-  vector<vector<double>> heights(col_names.size(),vector<double>(num_markers,0));              // q_i
+  vector<vector<double>> heights(col_names.size(),vector<double>(num_markers));              // q_i
   vector<vector<double>> actual_positions(col_names.size(),vector<double>(num_markers,0));     // n_i
   vector<vector<double>> desired_positions(col_names.size(),vector<double>(num_markers,0));    // n'_i
   vector<vector<double>> positions_increments(col_names.size(),vector<double>(num_markers,0)); // dn'_i
@@ -168,6 +154,8 @@ int main()
             if(cnt==buffer_size){ ///> full buffer --> build bins
               /// p2 quantiles::
               //size_t iqp = 0;
+              heights[icol].front()= min[icol];
+              heights[icol].back()= max[icol];
               for(size_t im=1; im<probabilities.size()-1;++im){
                 auto iq = static_cast<size_t>(probabilities[im]*cnt);
                 std::nth_element(begin(buffer[icol]),begin(buffer[icol])+iq,end(buffer[icol]));
@@ -410,58 +398,22 @@ int main()
       histloc[icol][j]=histloc[icol][j-1]+final_bin_size;
       hist[icol][j]=s(static_cast<double>(histloc[icol][j]));///> put a check on the spline
     }
-    cout << "bin_size_div_2 = " << bin_size_div_2 << endl;
-    cout << "s( " << mbinloc.size() << "  " << wshist.size() <<")\n";
-    for(auto j: mbinloc) cout << j << "  "; cout << endl;
-    for(auto j: wshist) cout << j << "  "; cout << endl;
-    cout << " final_bin_size: " << final_bin_size << endl;
-    for(size_t j=0;j<bins;++j) {
-      cout << histloc[icol][j] << "_" << hist[icol][j]<< "   ";
-    }
-    cout << endl;
-    cout << "binloc: ";for(auto j: binloc[icol]) cout << j << " "; cout << endl;
-    std::adjacent_difference(begin(binloc[icol]),end(binloc[icol]),std::ostream_iterator<double>(cout," ")); cout << endl;
-    for(auto j: whist[icol]) cout << j << " "; cout << endl;
-    cout << std::accumulate(begin(whist[icol]),end(whist[icol]),0) << endl;
+    //cout << "bin_size_div_2 = " << bin_size_div_2 << endl;
+    //cout << "s( " << mbinloc.size() << "  " << wshist.size() <<")\n";
+    //for(auto j: mbinloc) cout << j << "  "; cout << endl;
+    //for(auto j: wshist) cout << j << "  "; cout << endl;
+    //cout << " final_bin_size: " << final_bin_size << endl;
+    //for(size_t j=0;j<bins;++j) {
+      //cout << histloc[icol][j] << "_" << hist[icol][j]<< "   ";
+    //}
+    //cout << endl;
+    //cout << "binloc: ";for(auto j: binloc[icol]) cout << j << " "; cout << endl;
+    //std::adjacent_difference(begin(binloc[icol]),end(binloc[icol]),std::ostream_iterator<double>(cout," ")); cout << endl;
+    //for(auto j: whist[icol]) cout << j << " "; cout << endl;
+    //cout << std::accumulate(begin(whist[icol]),end(whist[icol]),0) << endl;
     ///
     /// hist done
     ///
-  }
-  for(size_t ih=0; ih<hist[0].size();++ih){
-    cout << "hist_" ;
-    cout << ih;
-    cout << ",";
-    for(size_t icol=0; icol<hist.size();++icol){
-      cout << llround(hist[icol][ih]);///> change to size_t later
-      if(icol!=col_names.size()-1) cout << ',';
-    } cout << endl;
-  }
-  for(size_t j=0; j<heights[0].size();++j){
-    if(j%2==0){///> more accurate but slower
-      cout << "quant_" ;
-      if(j==0) cout << 0.0;
-      else if(j==heights[0].size()-1) cout << 1.0;
-      else cout << probabilities[(j-1)/2];
-      cout << ",";
-      for(size_t i=0; i<col_names.size();++i){
-        //std::nth_element(begin(xv[i]),begin(xv[i])+xv[i].size()/2,end(xv[i]));
-        //cout << xv[i][xv[i].size()/2];
-        cout << heights[i][j];
-        if(i!=col_names.size()-1) cout << ',';
-      } cout << endl;
-    }else{
-      //cout << "q" ;
-      //if(j==0) cout << 0.0;
-      //else if(j==heights[0].size()-2) cout << (1.0+probabilities[(j-1)/2-1])/2;
-      //else cout << (probabilities[(j-1)/2]+probabilities[(j-1)/2-1])/2;
-      //cout << ",";
-      //for(size_t i=0; i<col_names.size();++i){
-        ////std::nth_element(begin(xv[i]),begin(xv[i])+xv[i].size()/2,end(xv[i]));
-        ////cout << xv[i][xv[i].size()/2];
-        //cout << heights[i][j];
-        //if(i!=col_names.size()-1) cout << ',';
-      //} cout << endl;
-    }
   }
 
   cout << "acc_name,"; for(size_t i=0; i<col_names.size();++i){
@@ -490,48 +442,56 @@ int main()
     cout << count[i].double_value();
     if(i!=col_names.size()-1) cout << ',';
   } cout << endl;
-  //cout << "mean,"; for(size_t i=0; i<col_names.size();++i){
-    //cout << mean[i];
-    //if(i!=col_names.size()-1) cout << ',';
-  //} cout << endl;
-  //cout << "m2,"; for(size_t i=0; i<col_names.size();++i){
-    //cout << sum2[i]/count[i];
-    //if(i!=col_names.size()-1) cout << ',';
-  //} cout << endl;
-  //cout << "m3,"; for(size_t i=0; i<col_names.size();++i){
-    //cout << sum3[i]/count[i];
-    //if(i!=col_names.size()-1) cout << ',';
-  //} cout << endl;
-  //cout << "std,"; for(size_t i=0; i<col_names.size();++i){
-    //cout << std[i];
-    //if(i!=col_names.size()-1) cout << ',';
-  //} cout << endl;
-  //cout << "var,"; for(size_t i=0; i<col_names.size();++i){
-    //cout << var[i];
-    //if(i!=col_names.size()-1) cout << ',';
-  //} cout << endl;
-  //cout << "ske,"; for(size_t i=0; i<col_names.size();++i){
-    //cout << ske[i];
-    //if(i!=col_names.size()-1) cout << ',';
-  //} cout << endl;
-  //cout << "kur,"; for(size_t i=0; i<col_names.size();++i){
-    //cout << kur[i];
-    //if(i!=col_names.size()-1) cout << ',';
-  //} cout << endl;
-  cout << "min,"; for(size_t i=0; i<col_names.size();++i){
-    cout << min[i];
-    if(i!=col_names.size()-1) cout << ',';
+  cout << "mean,"; for(size_t icol=0; icol<col_names.size();++icol){
+    cout << mean[icol];
+    if(icol!=col_names.size()-1) cout << ',';
   } cout << endl;
-  //cout << "25%,"; for(size_t i=0; i<col_names.size();++i){
-    //cout << heights[i][1];
-    //if(i!=col_names.size()-1) cout << ',';
-  //} cout << endl;
-  //for(size_t j=0; j<heights[0].size();++j){
-    //if(j%2==0){
+  cout << "m2,"; for(size_t icol=0; icol<col_names.size();++icol){
+    cout << sum2[icol]/count[icol].double_value();
+    if(icol!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  cout << "m3,"; for(size_t icol=0; icol<col_names.size();++icol){
+    cout << sum3[icol]/count[icol].double_value();
+    if(icol!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  cout << "m4,"; for(size_t icol=0; icol<col_names.size();++icol){
+    cout << sum4[icol]/count[icol].double_value();
+    if(icol!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  cout << "std,"; for(size_t icol=0; icol<col_names.size();++icol){
+    cout << std[icol];
+    if(icol!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  cout << "var,"; for(size_t icol=0; icol<col_names.size();++icol){
+    cout << var[icol];
+    if(icol!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  cout << "ske,"; for(size_t icol=0; icol<col_names.size();++icol){
+    cout << ske[icol];
+    if(icol!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  cout << "kur,"; for(size_t icol=0; icol<col_names.size();++icol){
+    cout << kur[icol];
+    if(icol!=col_names.size()-1) cout << ',';
+  } cout << endl;
+  for(size_t j=0; j<heights[0].size();++j){ ///>print quantiles
+    if(j%2==0){///> more accurate but slower
+      cout << "quant_" ;
+      if(j==0) cout << 0.0;
+      else if(j==heights[0].size()-1) cout << 1.0;
+      else cout << probabilities[(j-1)/2];
+      cout << ",";
+      for(size_t i=0; i<col_names.size();++i){
+        //std::nth_element(begin(xv[i]),begin(xv[i])+xv[i].size()/2,end(xv[i]));
+        //cout << xv[i][xv[i].size()/2];
+        cout << heights[i][j];
+        if(i!=col_names.size()-1) cout << ',';
+      } cout << endl;
+    }else{
       //cout << "q" ;
       //if(j==0) cout << 0.0;
-      //else if(j==heights[0].size()-1) cout << 1.0;
-      //else cout << probabilities[(j-1)/2];
+      //else if(j==heights[0].size()-2) cout << (1.0+probabilities[(j-1)/2-1])/2;
+      //else cout << (probabilities[(j-1)/2]+probabilities[(j-1)/2-1])/2;
       //cout << ",";
       //for(size_t i=0; i<col_names.size();++i){
         ////std::nth_element(begin(xv[i]),begin(xv[i])+xv[i].size()/2,end(xv[i]));
@@ -539,34 +499,18 @@ int main()
         //cout << heights[i][j];
         //if(i!=col_names.size()-1) cout << ',';
       //} cout << endl;
-    //}else{
-      ////cout << "q" ;
-      ////if(j==0) cout << 0.0;
-      ////else if(j==heights[0].size()-2) cout << (1.0+probabilities[(j-1)/2-1])/2;
-      ////else cout << (probabilities[(j-1)/2]+probabilities[(j-1)/2-1])/2;
-      ////cout << ",";
-      ////for(size_t i=0; i<col_names.size();++i){
-        //////std::nth_element(begin(xv[i]),begin(xv[i])+xv[i].size()/2,end(xv[i]));
-        //////cout << xv[i][xv[i].size()/2];
-        ////cout << heights[i][j];
-        ////if(i!=col_names.size()-1) cout << ',';
-      ////} cout << endl;
-    //}
-  //}
-  //cout << "50%,"; for(size_t i=0; i<col_names.size();++i){
-    ////std::nth_element(begin(xv[i]),begin(xv[i])+xv[i].size()/2,end(xv[i]));
-    ////cout << xv[i][xv[i].size()/2];
-    //cout << heights[i][2];
-    //if(i!=col_names.size()-1) cout << ',';
-  //} cout << endl;
-  //cout << "75%,"; for(size_t i=0; i<col_names.size();++i){
-    //cout << heights[i][3];
-    //if(i!=col_names.size()-1) cout << ',';
-  //} cout << endl;
-  cout << "max,"; for(size_t i=0; i<col_names.size();++i){
-    cout << max[i];
-    if(i!=col_names.size()-1) cout << ',';
-  } cout << endl;
+    }
+  }
+  for(size_t ih=0; ih<hist[0].size();++ih){///>print histograms
+    cout << "hist_" ;
+    cout << ih;
+    cout << ",";
+    for(size_t icol=0; icol<hist.size();++icol){
+      cout << llround(hist[icol][ih]);///> change to size_t later
+      if(icol!=col_names.size()-1) cout << ',';
+    } cout << endl;
+  }
+
 
   return 0;
 }
