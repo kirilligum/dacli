@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <numeric>
+#include <unistd.h>
 #include "spline.h"
 
 using namespace std;
@@ -51,8 +52,57 @@ auto read_header(T& in) {
   return col_names;
 }
 
-int main()
-{
+template<typename T>
+void draw_histograms(const string & name, const T& hist, size_t size){
+  const size_t qhist_plot_size=8*4;///> draw historgram plots
+  for(size_t ih=0; ih<hist[0].size();++ih) {
+    cout << name << "_"<<ih<<",";
+    for(size_t icol=0; icol<size;++icol){
+      size_t level = static_cast<size_t>(hist[icol][ih]*qhist_plot_size);
+      ////cout << level;
+      for(unsigned i=0; i<level;i+=4) cout << '#';
+      if(level%4==1) cout << ':';
+      else if(level%4==2) cout << '-';
+      else  cout << '+';
+      if(icol!=size-1) cout << ',';
+    } cout << endl;
+  }
+}
+
+int main(int argc, char** argv) {
+  int c;
+  bool short_flag=0, full_flag=0;
+  char *b_value=nullptr;
+  char *H_value=nullptr;
+  char *Q_value=nullptr;
+  while((c=getopt(argc,argv,"sfb:hH:Q:")) != -1)
+    switch(c){
+      case 's':
+        short_flag = 1;
+        break;
+      case 'f':
+        full_flag = 1;
+        break;
+      case 'b':
+        b_value = optarg;
+        break;
+      case 'Q':
+        Q_value = optarg;
+        break;
+      case 'H':
+        H_value = optarg;
+        break;
+      case '?':
+        if (optopt == 'b')
+          cerr << "Option -" << optopt << " requires an argument.\n";
+        else if (isprint (optopt))
+          cerr << "Unkown option -" << optopt << ". \n";
+        else
+          cerr << "Unknown option character" << optopt<< ". \n";
+        return 1;
+      default:
+        abort();
+    }
   cin.sync_with_stdio(false);
   auto col_names = read_header(cin);
 
@@ -76,8 +126,13 @@ int main()
   vector<double> min(col_names.size());
   vector<double> max(col_names.size());
   //const double p=0.5;
-  const size_t num_quantiles =3;
-  const size_t num_markers = num_quantiles*2+3;
+  size_t buffer_size = 10000;///> TODO if buffer size is larger than size_t return error
+  if(b_value) buffer_size=atoi(b_value);
+  vector<vector<double>> buffer(col_names.size()); ///> number of elements to buffer
+  for(auto &i:buffer) i.reserve(buffer_size);
+  size_t num_quantiles =3;
+  if(Q_value) num_quantiles=atoi(Q_value);
+  size_t num_markers = num_quantiles*2+3;
   vector<vector<double>> heights(col_names.size(),vector<double>(num_markers));              // q_i
   vector<vector<double>> actual_positions(col_names.size(),vector<double>(num_markers,0));     // n_i
   vector<vector<double>> desired_positions(col_names.size(),vector<double>(num_markers,0));    // n'_i
@@ -102,13 +157,11 @@ int main()
       desired_positions[icol][i] = 1. + 2. * (num_quantiles + 1.) * positions_increments[icol][i];
     }
   }
-  const size_t bins = 8;///> number of bins
-  const size_t bi = 3*bins;///> initial number of bins
-  const size_t bl = 2*bi;///> limiting  number of bins
-  const size_t buffer_size = bi*10000;///> TODO if buffer size is larger than size_t return error
+  size_t bins = 8;///> number of bins
+  if(H_value) bins = atoi(H_value);
+  size_t bi = 5*bins;///> initial number of bins; small number gives negative result
+  size_t bl = 2*bi;///> limiting  number of bins
   double bin_size=0.0;
-  vector<vector<double>> buffer(col_names.size()); ///> number of elements to buffer
-  for(auto &i:buffer) i.reserve(buffer_size);
   vector<deque<double>> binloc(col_names.size(), deque<double>(bi));///> working histogram
   vector<deque<size_t>> whist(col_names.size(), deque<size_t>(bi,0));///> working histogram
   vector<vector<double>> hist(col_names.size(), vector<double>(bins,0));///> final histogram
@@ -144,8 +197,10 @@ int main()
           sum[icol]+=x;
           double x2=x*x;
           sum2[icol]+=x2;
-          sum3[icol]+=x2*x;
-          sum4[icol]+=x2*x2;
+          if(!short_flag){
+            sum3[icol]+=x2*x;
+            sum4[icol]+=x2*x2;
+          }
           //xv[icol].push_back(x);///> intropolate instead of p2
           std::size_t cnt = count[icol].value()[0];///> TODO put a check that sizeof(count_type)<buffer_size
           // first accumulate num_markers samples
@@ -166,14 +221,16 @@ int main()
                 //iqp=iq;
               }
               /// hist:
-              auto mmp = std::minmax_element(begin(buffer[icol]),end(buffer[icol]));
-              bin_size = (*mmp.second-*mmp.first)/(bi);
-              for(size_t i=0; i<bi; ++i) {///> create bins
-                binloc[icol][i]=*mmp.first + (i+1)*bin_size;///> ends of the bins are stored
-              }
-              for(size_t ibuf=0; ibuf<buffer_size; ++ibuf) {///> fill bins
-                auto it = std::lower_bound( binloc[icol].begin() , binloc[icol].end() , buffer[icol][ibuf]);
-                ++whist[icol][std::distance(binloc[icol].begin(), it)];
+              if(!short_flag){
+                auto mmp = std::minmax_element(begin(buffer[icol]),end(buffer[icol]));
+                bin_size = (*mmp.second-*mmp.first)/(bi);
+                for(size_t i=0; i<bi; ++i) {///> create bins
+                  binloc[icol][i]=*mmp.first + (i+1)*bin_size;///> ends of the bins are stored
+                }
+                for(size_t ibuf=0; ibuf<buffer_size; ++ibuf) {///> fill bins
+                  auto it = std::lower_bound( binloc[icol].begin() , binloc[icol].end() , buffer[icol][ibuf]);
+                  ++whist[icol][std::distance(binloc[icol].begin(), it)];
+                }
               }
               vector<double>().swap(buffer[icol]);///> clear space for the buffer (checked on massif)
             //if(cnt <= num_markers) {
@@ -244,39 +301,41 @@ int main()
               }
             }
             /// hist
-            if(x<=binloc[icol].front()-bin_size){ ///>    add new bins of the same size in the beginning or the end so that a new element fits in
-              while(x<=binloc[icol].front()-bin_size){
-                binloc[icol].push_front(binloc[icol].front()-bin_size);
-                whist[icol].push_front(0);
-              }
-              whist[icol].front()=1;
-            }else if(binloc[icol].back()<x) {
-              while(binloc[icol].back()<x) {
-                binloc[icol].push_back(binloc[icol].back()+bin_size);
-                whist[icol].push_back(0);
-              }
-              whist[icol].back()=1;
-            }else{
-              auto it = std::lower_bound( binloc[icol].begin() , binloc[icol].end() , x);
-              ++whist[icol][std::distance(binloc[icol].begin(), it)];
-            }
-            while(binloc[icol].size()>=bl){///> combine bins when number of bins doubled
-              deque<double> tmp_binloc;
-              deque<size_t> tmp_whist;
-              for(size_t i=0; i+1< binloc[icol].size();++(++i)){
-                tmp_binloc.push_back(binloc[icol][i+1]);
-                tmp_whist.push_back(whist[icol][i]+whist[icol][i+1]);
-              }
-              if(tmp_binloc.size()*2==binloc[icol].size()-1){
-                tmp_binloc.push_back(binloc[icol].back()+bin_size);
-                tmp_whist.push_back(whist[icol].back());
-              }else if(tmp_binloc.size()*2==binloc[icol].size()){
+            if(!short_flag){
+              if(x<=binloc[icol].front()-bin_size){ ///>    add new bins of the same size in the beginning or the end so that a new element fits in
+                while(x<=binloc[icol].front()-bin_size){
+                  binloc[icol].push_front(binloc[icol].front()-bin_size);
+                  whist[icol].push_front(0);
+                }
+                whist[icol].front()=1;
+              }else if(binloc[icol].back()<x) {
+                while(binloc[icol].back()<x) {
+                  binloc[icol].push_back(binloc[icol].back()+bin_size);
+                  whist[icol].push_back(0);
+                }
+                whist[icol].back()=1;
               }else{
-                cout << "error: sizes of bins during combining don't match\n";
+                auto it = std::lower_bound( binloc[icol].begin() , binloc[icol].end() , x);
+                ++whist[icol][std::distance(binloc[icol].begin(), it)];
               }
-              swap(tmp_binloc,binloc[icol]);
-              swap(tmp_whist,whist[icol]);
-              bin_size*=2;
+              while(binloc[icol].size()>=bl){///> combine bins when number of bins doubled
+                deque<double> tmp_binloc;
+                deque<size_t> tmp_whist;
+                for(size_t i=0; i+1< binloc[icol].size();++(++i)){
+                  tmp_binloc.push_back(binloc[icol][i+1]);
+                  tmp_whist.push_back(whist[icol][i]+whist[icol][i+1]);
+                }
+                if(tmp_binloc.size()*2==binloc[icol].size()-1){
+                  tmp_binloc.push_back(binloc[icol].back()+bin_size);
+                  tmp_whist.push_back(whist[icol].back());
+                }else if(tmp_binloc.size()*2==binloc[icol].size()){
+                }else{
+                  cout << "error: sizes of bins during combining don't match\n";
+                }
+                swap(tmp_binloc,binloc[icol]);
+                swap(tmp_whist,whist[icol]);
+                bin_size*=2;
+              }
             }
           }
           ///
@@ -296,10 +355,6 @@ int main()
       ++icol;
     }
   }
-  vector<vector<double>> qhist(col_names.size());
-  vector<vector<double>> qhist_abs(col_names.size());
-  vector<vector<size_t>> qhist_count(col_names.size());
-  vector<vector<double>> acc_heights(col_names.size());
   for(size_t icol=0; icol<col_names.size();++icol){
     if(static_cast<size_t>(count[icol].value()[0])<buffer_size){ ///> full buffer --> build bins
       /// p2 quantiles::
@@ -314,14 +369,16 @@ int main()
         //iqp=iq;
       }
       /// hist:
-      auto mmp = std::minmax_element(begin(buffer[icol]),end(buffer[icol]));
-      bin_size = (*mmp.second-*mmp.first)/(bi);
-      for(size_t i=0; i<bi; ++i) {///> create bins
-        binloc[icol][i]=*mmp.first + (i+1)*bin_size;///> ends of the bins are stored
-      }
-      for(size_t ibuf=0; ibuf<buffer_size; ++ibuf) {///> fill bins
-        auto it = std::lower_bound( binloc[icol].begin() , binloc[icol].end() , buffer[icol][ibuf]);
-        ++whist[icol][std::distance(binloc[icol].begin(), it)];
+      if(!short_flag){
+        auto mmp = std::minmax_element(begin(buffer[icol]),end(buffer[icol]));
+        bin_size = (*mmp.second-*mmp.first)/(bi);
+        for(size_t i=0; i<bi; ++i) {///> create bins
+          binloc[icol][i]=*mmp.first + (i+1)*bin_size;///> ends of the bins are stored
+        }
+        for(size_t ibuf=0; ibuf<buffer_size; ++ibuf) {///> fill bins
+          auto it = std::lower_bound( binloc[icol].begin() , binloc[icol].end() , buffer[icol][ibuf]);
+          ++whist[icol][std::distance(binloc[icol].begin(), it)];
+        }
       }
       vector<double>().swap(buffer[icol]);///> clear space for the buffer (checked on massif)
     }
@@ -330,73 +387,54 @@ int main()
     mean[icol] = k;
     double sum1s = sum[icol]-n*k;
     double sum2s = sum2[icol] -2.0*k*sum[icol] +n*k2;
-    double sum3s = sum3[icol] -3*k*sum2[icol] +3*k2*sum[icol] -n*k3;
-    double sum4s = sum4[icol] -4*k*sum3[icol] +6*k2*sum2[icol] -4*k3*sum[icol] +n*k4;
     double m1 = sum1s/n, m12=m1*m1, m13=m12*m1,m14=m12*m12;
     double m2 = sum2s/n;
-    double m3 = sum3s/n;
-    double m4 = sum4s/n;
+    double sum3s = 0;
+    double sum4s =0;
+    double m3 =0;
+    double m4 =0;
+    if(!short_flag){
+      sum3s = sum3[icol] -3*k*sum2[icol] +3*k2*sum[icol] -n*k3;
+      sum4s = sum4[icol] -4*k*sum3[icol] +6*k2*sum2[icol] -4*k3*sum[icol] +n*k4;
+      m3 = sum3s/n;
+      m4 = sum4s/n;
+    }
     double variance = m2-m12;
     //double sample_variance = variance*n/(n-1);
     var[icol] = variance;
     double stdev = sqrt(variance);
     //double sample_stdev = sqrt((sum2s - sum1s*k)/(n-1));
     std[icol] = stdev;
-    double skewness = (m3 -3*m1*m2 +2*m13)/(variance*stdev);
-    //double skew_bias = sqrt(pow((n-1)/n,3));
-    //double sample_skewness = skewness*skew_bias;
-    ske[icol] = skewness;
-    double kurtosis = (m4 -4*m1*m3 +6*m12*m2 -3*m14)/(variance*variance)-3;
-    kur[icol] = kurtosis;
-    ///
-    /// qhist
-    ///
-    for(size_t i=0; i< heights[icol].size(); ++(++i)) {
-      acc_heights[icol].push_back(heights[icol][i]);
+    if(!short_flag){
+      double skewness = (m3 -3*m1*m2 +2*m13)/(variance*stdev);
+      //double skew_bias = sqrt(pow((n-1)/n,3));
+      //double sample_skewness = skewness*skew_bias;
+      ske[icol] = skewness;
+      double kurtosis = (m4 -4*m1*m3 +6*m12*m2 -3*m14)/(variance*variance)-3;
+      kur[icol] = kurtosis;
     }
-    std::adjacent_difference(begin(acc_heights[icol]),end(acc_heights[icol]),std::back_inserter(qhist[icol]));
-    double diff_abs = *std::max_element(begin(qhist[icol]),end(qhist[icol]))-*std::min_element(begin(qhist[icol]),end(qhist[icol]));
-    for(auto i: qhist[icol]) qhist_abs[icol].push_back(i/diff_abs);
-    double diff_rel = max[icol] - min[icol];
-    //cout << diff_abs << "  " << diff_rel << "  " << count[icol] << endl;
-    for(auto i: qhist[icol]) qhist_count[icol].push_back(static_cast<size_t>(i/diff_rel*count[icol].double_value()));
-    //const size_t qhist_plot_size=8*4;
-    //for(size_t ih=0; ih<qhist_abs[0].size();++ih) {
-      //cout << "qhist_"<<ih<<",";
-      //for(size_t icol=0; icol<col_names.size();++icol){
-        //size_t level = static_cast<size_t>(qhist_abs[icol][ih]*qhist_plot_size);
-        //////cout << level;
-        //for(unsigned i=0; i<level;i+=4) cout << '#';
-        //if(level%4==1) cout << ':';
-        //else if(level%4==2) cout << '-';
-        //else  cout << '+';
-        //if(icol!=col_names.size()-1) cout << ',';
-      //} cout << endl;
-    //}
-    //cout << endl;
-    ///
-    /// qhist done
-    ///
     ///
     /// hist --- make splines  and get an average histogram
     ///
-    double bin_size_div_2 = (binloc[icol][1]-binloc[icol][0])*0.5;
-    vector<double>mbinloc;
-    mbinloc.push_back(binloc[icol].front()-3*bin_size_div_2);
-    for(auto j: binloc[icol]) mbinloc.push_back(j-bin_size_div_2);
-    mbinloc.push_back(mbinloc.back()+2*bin_size_div_2);
-    vector<double> wshist;
-    wshist.push_back(0.0);
-    for(auto j:whist[icol]) wshist.push_back(j);
-    wshist.push_back(0.0);
-    tk::spline s; //  print out all bins or spline the beans and divide the spline to get approximate bins
-    s.set_points(mbinloc,wshist);
-    double final_bin_size= (max[icol]-min[icol])/bins;
-    histloc[icol][0]=min[icol]+final_bin_size*0.5;
-    hist[icol][0]=s(static_cast<double>(histloc[icol][0]));
-    for(size_t j=1;j<bins;++j) {
-      histloc[icol][j]=histloc[icol][j-1]+final_bin_size;
-      hist[icol][j]=s(static_cast<double>(histloc[icol][j]));///> put a check on the spline
+    if(!short_flag){
+      double bin_size_div_2 = (binloc[icol][1]-binloc[icol][0])*0.5;
+      vector<double>mbinloc;
+      mbinloc.push_back(binloc[icol].front()-3*bin_size_div_2);
+      for(auto j: binloc[icol]) mbinloc.push_back(j-bin_size_div_2);
+      mbinloc.push_back(mbinloc.back()+2*bin_size_div_2);
+      vector<double> wshist;
+      wshist.push_back(0.0);
+      for(auto j:whist[icol]) wshist.push_back(j);
+      wshist.push_back(0.0);
+      tk::spline s; //  print out all bins or spline the beans and divide the spline to get approximate bins
+      s.set_points(mbinloc,wshist);
+      double final_bin_size= (max[icol]-min[icol])/bins;
+      histloc[icol][0]=min[icol]+final_bin_size*0.5;
+      hist[icol][0]=s(static_cast<double>(histloc[icol][0]));
+      for(size_t j=1;j<bins;++j) {
+        histloc[icol][j]=histloc[icol][j-1]+final_bin_size;
+        hist[icol][j]=s(static_cast<double>(histloc[icol][j]));///> put a check on the spline
+      }
     }
     //cout << "bin_size_div_2 = " << bin_size_div_2 << endl;
     //cout << "s( " << mbinloc.size() << "  " << wshist.size() <<")\n";
@@ -446,34 +484,38 @@ int main()
     cout << mean[icol];
     if(icol!=col_names.size()-1) cout << ',';
   } cout << endl;
-  cout << "m2,"; for(size_t icol=0; icol<col_names.size();++icol){
-    cout << sum2[icol]/count[icol].double_value();
-    if(icol!=col_names.size()-1) cout << ',';
-  } cout << endl;
-  cout << "m3,"; for(size_t icol=0; icol<col_names.size();++icol){
-    cout << sum3[icol]/count[icol].double_value();
-    if(icol!=col_names.size()-1) cout << ',';
-  } cout << endl;
-  cout << "m4,"; for(size_t icol=0; icol<col_names.size();++icol){
-    cout << sum4[icol]/count[icol].double_value();
-    if(icol!=col_names.size()-1) cout << ',';
-  } cout << endl;
+  if(!short_flag){
+    cout << "m2,"; for(size_t icol=0; icol<col_names.size();++icol){
+      cout << sum2[icol]/count[icol].double_value();
+      if(icol!=col_names.size()-1) cout << ',';
+    } cout << endl;
+    cout << "m3,"; for(size_t icol=0; icol<col_names.size();++icol){
+      cout << sum3[icol]/count[icol].double_value();
+      if(icol!=col_names.size()-1) cout << ',';
+    } cout << endl;
+    cout << "m4,"; for(size_t icol=0; icol<col_names.size();++icol){
+      cout << sum4[icol]/count[icol].double_value();
+      if(icol!=col_names.size()-1) cout << ',';
+    } cout << endl;
+  }
   cout << "std,"; for(size_t icol=0; icol<col_names.size();++icol){
     cout << std[icol];
     if(icol!=col_names.size()-1) cout << ',';
   } cout << endl;
-  cout << "var,"; for(size_t icol=0; icol<col_names.size();++icol){
-    cout << var[icol];
-    if(icol!=col_names.size()-1) cout << ',';
-  } cout << endl;
-  cout << "ske,"; for(size_t icol=0; icol<col_names.size();++icol){
-    cout << ske[icol];
-    if(icol!=col_names.size()-1) cout << ',';
-  } cout << endl;
-  cout << "kur,"; for(size_t icol=0; icol<col_names.size();++icol){
-    cout << kur[icol];
-    if(icol!=col_names.size()-1) cout << ',';
-  } cout << endl;
+  if(!short_flag){
+    cout << "var,"; for(size_t icol=0; icol<col_names.size();++icol){
+      cout << var[icol];
+      if(icol!=col_names.size()-1) cout << ',';
+    } cout << endl;
+    cout << "ske,"; for(size_t icol=0; icol<col_names.size();++icol){
+      cout << ske[icol];
+      if(icol!=col_names.size()-1) cout << ',';
+    } cout << endl;
+    cout << "kur,"; for(size_t icol=0; icol<col_names.size();++icol){
+      cout << kur[icol];
+      if(icol!=col_names.size()-1) cout << ',';
+    } cout << endl;
+  }
   for(size_t j=0; j<heights[0].size();++j){ ///>print quantiles
     if(j%2==0){///> more accurate but slower
       cout << "quant_" ;
@@ -501,16 +543,45 @@ int main()
       //} cout << endl;
     }
   }
-  for(size_t ih=0; ih<hist[0].size();++ih){///>print histograms
-    cout << "hist_" ;
-    cout << ih;
-    cout << ",";
-    for(size_t icol=0; icol<hist.size();++icol){
-      cout << llround(hist[icol][ih]);///> change to size_t later
-      if(icol!=col_names.size()-1) cout << ',';
-    } cout << endl;
+  if(!short_flag){
+    vector<vector<double>> qhist_abs(col_names.size());///> calculate histogram plot heights
+    for(size_t icol=0; icol<col_names.size();++icol){
+      vector<double> qhist;
+      //vector<size_t> qhist_count;
+      vector<double> acc_heights;
+      for(size_t i=0; i< heights[icol].size(); ++(++i)) {
+        acc_heights.push_back(heights[icol][i]);
+      }
+      std::adjacent_difference(begin(acc_heights),end(acc_heights),std::back_inserter(qhist));
+      double diff_abs = *std::max_element(begin(qhist),end(qhist))-*std::min_element(begin(qhist),end(qhist));
+      for(auto i: qhist) qhist_abs[icol].push_back(i/diff_abs);
+      //double diff_rel = max[icol] - min[icol];
+      //cout << diff_abs << "  " << diff_rel << "  " << count[icol] << endl;
+      //for(auto i: qhist) qhist_count.push_back(static_cast<size_t>(i/diff_rel*count[icol].double_value()));
+    }
+    //draw_histograms("qhist",qhist_abs,col_names.size());
+    for(size_t ih=0; ih<hist[0].size();++ih){///>print histograms
+      cout << "hist_" ;
+      cout << ih;
+      cout << ",";
+      for(size_t icol=0; icol<hist.size();++icol){
+        cout << llround(hist[icol][ih]);///> change to size_t later
+        if(icol!=col_names.size()-1) cout << ',';
+      } cout << endl;
+    }
+    vector<vector<double>> hist_abs(col_names.size());///> calculate histogram plot heights
+    for(size_t icol=0; icol<col_names.size();++icol){
+      size_t maxe = *std::max_element(begin(hist[icol]),end(hist[icol]));
+      size_t mine = *std::min_element(begin(hist[icol]),end(hist[icol]));
+      size_t diff_abs = maxe-mine;
+      for(auto i: hist[icol]) hist_abs[icol].push_back((i-mine)/diff_abs);
+      for(auto &i: hist_abs[icol]) {
+        if(i<=0) i=0;
+        else if (i>=1) i=1;
+      }
+    }
+    //draw_histograms("hhist",hist_abs,col_names.size());
   }
-
 
   return 0;
 }
