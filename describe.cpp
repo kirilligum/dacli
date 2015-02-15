@@ -13,44 +13,10 @@
 #include <numeric>
 #include <unistd.h>
 #include "spline.h"
+#include "read_header.hpp"
+#include "counter.hpp"
 
 using namespace std;
-
-template<typename C>
-class counter{
-  public:
-    vector<C> c;
-    counter():c{0},max{(pow(2,8*sizeof(c[0])))}{}
-    void increment(){
-      c[0]++;
-      for(size_t i=1;c[i-1]==0;++i){
-        c[i]++;
-        if(i==c.size())
-          c.push_back(1);
-      }
-    }
-    vector<C> value(){
-      return c;
-    }
-    double double_value(){
-      double x=0.0;
-      for(size_t i=0;i<c.size();++i){
-        x+=static_cast<double>(c[i])*pow(max,i);
-      }
-      return x;
-    }
-    double max;
-};
-
-template<typename T>
-auto read_header(T& in) {
-  string header; getline(in,header);
-  vector<string> col_names;
-  istringstream iss_header(header);
-  string tmp_tok; getline(iss_header,tmp_tok,',');
-  for(string tok; getline(iss_header,tok,',');col_names.push_back(tok));
-  return col_names;
-}
 
 template<typename T>
 void draw_histograms(const string & name, const T& hist, size_t size){
