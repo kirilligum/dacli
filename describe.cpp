@@ -122,6 +122,10 @@ int main(int argc, char** argv) {
   //const double p=0.5;
   size_t buffer_size = 10000;///> TODO if buffer size is larger than size_t return error
   if(b_value) buffer_size=atoi(b_value);
+  if(buffer_size<2) {
+    cout << "Error: buffer is too small. \n";
+    return 1;
+  }
   vector<vector<double>> buffer(col_names.size()); ///> number of elements to buffer
   for(auto &i:buffer) i.reserve(buffer_size);
   size_t num_quantiles =3;
@@ -151,9 +155,9 @@ int main(int argc, char** argv) {
       desired_positions[icol][i] = 1. + 2. * (num_quantiles + 1.) * positions_increments[icol][i];
     }
   }
-  size_t bins = 2;///> number of bins
+  size_t bins = 8;///> number of bins
   if(H_value) bins = atoi(H_value);
-  size_t bi = 1*bins;///> initial number of bins; small number gives negative result
+  size_t bi = 2*bins;///> initial number of bins; small number gives negative result
   size_t bl = 2*bi;///> limiting  number of bins
   double bin_size=0.0;
   vector<deque<double>> binloc(col_names.size(), deque<double>(bi+1));///> working histogram
@@ -198,7 +202,7 @@ int main(int argc, char** argv) {
           //xv[icol].push_back(x);///> intropolate instead of p2
           std::size_t cnt = count[icol].value()[0];///> TODO put a check that sizeof(count_type)<buffer_size
           // first accumulate num_markers samples
-          if (cnt<buffer_size+1){///> count starts from 0, therefore +1
+          if (cnt<=buffer_size){///> count starts from 0, therefore +1
             buffer[icol].push_back(x); ///> fill buffer
             if(cnt==buffer_size){ ///> full buffer --> build bins
               /// p2 quantiles::
@@ -238,65 +242,65 @@ int main(int argc, char** argv) {
             /// p2
             std::size_t sample_cell = 1;
             // find cell k = sample_cell such that heights[icol][k-1] <= sample < heights[icol][k]
-            if(x < heights[icol][0]) {
-              heights[icol][0] = x;
-              sample_cell = 1;
-            } else if(x >= heights[icol][num_markers - 1]) {
-              heights[icol][num_markers - 1] = x;
-              sample_cell = num_markers - 1;
-            } else {
-              auto it = std::upper_bound( heights[icol].begin() , heights[icol].end() , x);
-              sample_cell = std::distance(heights[icol].begin(), it);
-            }
-            // update actual positions of all markers above sample_cell index
-            for(std::size_t i = sample_cell; i < num_markers; ++i) {
-              ++actual_positions[icol][i];
-            }
-            // update desired positions of all markers
-            for(std::size_t i = 0; i < num_markers; ++i) {
-              desired_positions[icol][i] += positions_increments[icol][i];
-            }
-            // adjust heights[icol] and actual positions of markers 1 to num_markers-2 if necessary
-            for(std::size_t i = 1; i <= num_markers - 2; ++i) {
-              // offset to desired position
-              double d = desired_positions[icol][i] - actual_positions[icol][i];
-              // offset to next position
-              double dp = actual_positions[icol][i+1] - actual_positions[icol][i];
-              // offset to previous position
-              double dm = actual_positions[icol][i-1] - actual_positions[icol][i];
-              // height ds
-              if((d >= 1 && dp > 1) || (d <= -1 && dm < -1)) {
-                double hp = (heights[icol][i+1] - heights[icol][i]) / dp;
-                double hm = (heights[icol][i-1] - heights[icol][i]) / dm;
-                bool neg_d = signbit(d);
-                // try adjusting heights[icol][i] using p-squared formula
-                double h;
-                if(neg_d) {
-                  h = heights[icol][i] -((-1-dm)*hp +(dp+1)*hm)/(dp-dm);
-                }else{
-                  h = heights[icol][i] +(( 1-dm)*hp +(dp-1)*hm)/(dp-dm);
-                }
-                if(heights[icol][i - 1] < h && h < heights[icol][i + 1]) {
-                    heights[icol][i] = h;
-                } else {
-                    // use linear formula
-                    if(d > 0) {
-                        heights[icol][i] += hp;
-                    }
-                    if(d < 0) {
-                        heights[icol][i] -= hm;
-                    }
-                }
-                if(neg_d) {
-                  actual_positions[icol][i] --;
-                }else{
-                  actual_positions[icol][i] ++;
-                }
-              }
-            }
+            //if(x < heights[icol][0]) {
+              //heights[icol][0] = x;
+              //sample_cell = 1;
+            //} else if(x >= heights[icol][num_markers - 1]) {
+              //heights[icol][num_markers - 1] = x;
+              //sample_cell = num_markers - 1;
+            //} else {
+              //auto it = std::upper_bound( heights[icol].begin() , heights[icol].end() , x);
+              //sample_cell = std::distance(heights[icol].begin(), it);
+            //}
+            //// update actual positions of all markers above sample_cell index
+            //for(std::size_t i = sample_cell; i < num_markers; ++i) {
+              //++actual_positions[icol][i];
+            //}
+            //// update desired positions of all markers
+            //for(std::size_t i = 0; i < num_markers; ++i) {
+              //desired_positions[icol][i] += positions_increments[icol][i];
+            //}
+            //// adjust heights[icol] and actual positions of markers 1 to num_markers-2 if necessary
+            //for(std::size_t i = 1; i <= num_markers - 2; ++i) {
+              //// offset to desired position
+              //double d = desired_positions[icol][i] - actual_positions[icol][i];
+              //// offset to next position
+              //double dp = actual_positions[icol][i+1] - actual_positions[icol][i];
+              //// offset to previous position
+              //double dm = actual_positions[icol][i-1] - actual_positions[icol][i];
+              //// height ds
+              //if((d >= 1 && dp > 1) || (d <= -1 && dm < -1)) {
+                //double hp = (heights[icol][i+1] - heights[icol][i]) / dp;
+                //double hm = (heights[icol][i-1] - heights[icol][i]) / dm;
+                //bool neg_d = signbit(d);
+                //// try adjusting heights[icol][i] using p-squared formula
+                //double h;
+                //if(neg_d) {
+                  //h = heights[icol][i] -((-1-dm)*hp +(dp+1)*hm)/(dp-dm);
+                //}else{
+                  //h = heights[icol][i] +(( 1-dm)*hp +(dp-1)*hm)/(dp-dm);
+                //}
+                //if(heights[icol][i - 1] < h && h < heights[icol][i + 1]) {
+                    //heights[icol][i] = h;
+                //} else {
+                    //// use linear formula
+                    //if(d > 0) {
+                        //heights[icol][i] += hp;
+                    //}
+                    //if(d < 0) {
+                        //heights[icol][i] -= hm;
+                    //}
+                //}
+                //if(neg_d) {
+                  //actual_positions[icol][i] --;
+                //}else{
+                  //actual_positions[icol][i] ++;
+                //}
+              //}
+            //}
             /// hist
             if(!short_flag){
-                cout << "hist > binloc " << binloc << endl;
+                //cout << "hist > binloc " << binloc << endl;
               if(x<=binloc[icol].front()-bin_size){ ///>    add new bins of the same size in the beginning or the end so that a new element fits in
                 while(x<=binloc[icol].front()-bin_size){
                   binloc[icol].push_front(binloc[icol].front()-bin_size);
@@ -436,26 +440,41 @@ int main(int argc, char** argv) {
         double pre_sum = prev_qest;///> sum all bins preceding the est marker
         double nest=histloc[icol][iest],qest_after=0.0, qest_before=0.0;
         cout << "pre_sum " << pre_sum << endl;
-        while(binloc[icol][ical]<nest) {
+        cout << "nest " << nest << endl;
+          cout << "ical " << ical << endl;
+        while( binloc[icol][ical]<nest && ical < binloc[icol].size()){
           pre_sum+=whist[icol][ical];
           ++ical;
+          cout << "ical inloop " << ical << endl;
         }
-        cout << "pre_sum " << pre_sum << endl;
-        /// estimates histogram's bin value qi at needed location ni
-        if(ical<iest) cout << "error: icatl<iest\n";
-        //if(ical<3) cout << " error ical < 3\n";
-        if(ical-1==0 || binloc[icol][ical]-nest<nest-binloc[icol][ical-1]){ ///> closer to the left border |....i.|.......|
-          double nn=binloc[icol][ical+1], np=binloc[icol][ical-1], ni=binloc[icol][ical];
-          double qp=whist[icol][ical-1],qi=whist[icol][ical],qn=whist[icol][ical+1];
+        cout << "pre_sum after while " << pre_sum << endl;
+        if(ical<iest) cout << "error: ical<iest\n";
+        if( ical==binloc[icol].size()-1){
+          pre_sum+=whist[icol][ical];
+          qest_before=0.0;
+        }else if (ical==0){
+          double nn=binloc[icol][ical+1], ni=binloc[icol][ical], np=2*ni-nn;
+          double qp=0.0,qi=whist[icol][ical],qn=whist[icol][ical+1];
+          cout << "ical==0" << vector<double>{ nest, nn, np, ni, qp,qi,qn} << endl;
           qest_before = hist_adjust_p2_left( nest, nn, np, ni, qp,qi,qn);
           qest_after= qi-qest_before;
-        } else{ ///> closer to the left border |......|.i.....|
-          double nn=binloc[icol][ical], np=binloc[icol][ical-2], ni=binloc[icol][ical-1];
-          double qp=whist[icol][ical-2],qi=whist[icol][ical-1],qn=whist[icol][ical];
-          qest_before = hist_adjust_p2_right( nest, nn, np, ni, qp,qi,qn);
-          qest_after= qi-qest_before;
+        }else{
+          /// estimates histogram's bin value qi at needed location ni
+          if(ical-1==0 || binloc[icol][ical]-nest<nest-binloc[icol][ical-1]){ ///> closer to the left border |....i.|.......|
+            double nn=binloc[icol][ical+1], np=binloc[icol][ical-1], ni=binloc[icol][ical];
+            double qp=whist[icol][ical-1],qi=whist[icol][ical],qn=whist[icol][ical+1];
+            cout << "ical!=0" << vector<double>{ nest, nn, np, ni, qp,qi,qn} << endl;
+            qest_before = hist_adjust_p2_left( nest, nn, np, ni, qp,qi,qn);
+            qest_after= qi-qest_before;
+          } else{ ///> closer to the left border |......|.i.....|
+            double nn=binloc[icol][ical], np=binloc[icol][ical-2], ni=binloc[icol][ical-1];
+            double qp=whist[icol][ical-2],qi=whist[icol][ical-1],qn=whist[icol][ical];
+            qest_before = hist_adjust_p2_right( nest, nn, np, ni, qp,qi,qn);
+            qest_after= qi-qest_before;
+          }
         }
         ++ical;
+        cout << "qest_before " <<  qest_before << endl;
         hist[icol][iest]= qest_before+pre_sum;
         cout << "hist  " << hist << endl;
         prev_nest=nest;
