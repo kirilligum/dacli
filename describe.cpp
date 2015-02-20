@@ -16,6 +16,8 @@
 #include "read_header.hpp"
 #include "counter.hpp"
 
+#include "prettyprint.hpp"
+
 using namespace std;
 
 template<typename T>
@@ -33,6 +35,32 @@ void draw_histograms(const string & name, const T& hist, size_t size){
       if(icol!=size-1) cout << ',';
     } cout << endl;
   }
+}
+
+template<typename T>
+auto hist_adjust_p2_left( T nest, T nn, T np, T ni, T qp,T qi,T qn){
+  double qest_before;
+  if(qp<qi&&qi<qn){
+    double wep=nest-np,wie=ni-nest,wip=ni-np,wni=nn-ni,wnp=nn-np, wne=nn-nest;
+    qest_before= wep*(qi*wni*(wip+wne)-qn*wie*wip)/(wip*wni*wnp);
+  } else { ///> use linear
+    double wep=nest-np,wip=ni-np;
+    qest_before= qi*wep/wip;
+  }
+  return qest_before;
+}
+
+template<typename T>
+auto hist_adjust_p2_right( T nest, T nn, T np, T ni, T qp,T qi,T qn){
+  double qest_before;
+  if(qp<qi&&qi<qn){
+    double wep=nest-np,wip=ni-np,wni=nn-ni,wnp=nn-np, wne=nn-nest, wei=nest-ni;
+    qest_before= wei*(qi*wne*wni+qn*wep*wip)/(wip*wni*wnp);
+  } else { ///> use linear
+    double wip=ni-np, wei=nest-ni;
+    qest_before= qi*wei/wip;
+  }
+  return qest_before;
 }
 
 int main(int argc, char** argv) {
@@ -123,13 +151,13 @@ int main(int argc, char** argv) {
       desired_positions[icol][i] = 1. + 2. * (num_quantiles + 1.) * positions_increments[icol][i];
     }
   }
-  size_t bins = 8;///> number of bins
+  size_t bins = 2;///> number of bins
   if(H_value) bins = atoi(H_value);
-  size_t bi = 5*bins;///> initial number of bins; small number gives negative result
+  size_t bi = 1*bins;///> initial number of bins; small number gives negative result
   size_t bl = 2*bi;///> limiting  number of bins
   double bin_size=0.0;
-  vector<deque<double>> binloc(col_names.size(), deque<double>(bi));///> working histogram
-  vector<deque<size_t>> whist(col_names.size(), deque<size_t>(bi,0));///> working histogram
+  vector<deque<double>> binloc(col_names.size(), deque<double>(bi+1));///> working histogram
+  vector<deque<size_t>> whist(col_names.size(), deque<size_t>(bi+1,0));///> working histogram
   vector<vector<double>> hist(col_names.size(), vector<double>(bins,0));///> final histogram
   vector<vector<double>> histloc(col_names.size(), vector<double>(bins,0));///> final histogram
   bool first_line_not_read =1;
@@ -190,8 +218,8 @@ int main(int argc, char** argv) {
               if(!short_flag){
                 auto mmp = std::minmax_element(begin(buffer[icol]),end(buffer[icol]));
                 bin_size = (*mmp.second-*mmp.first)/(bi);
-                for(size_t i=0; i<bi; ++i) {///> create bins
-                  binloc[icol][i]=*mmp.first + (i+1)*bin_size;///> ends of the bins are stored
+                for(size_t i=0; i<=bi; ++i) {///> create bins
+                  binloc[icol][i]=*mmp.first + (i)*bin_size;///> ends of the bins are stored
                 }
                 for(size_t ibuf=0; ibuf<buffer_size; ++ibuf) {///> fill bins
                   auto it = std::lower_bound( binloc[icol].begin() , binloc[icol].end() , buffer[icol][ibuf]);
@@ -268,6 +296,7 @@ int main(int argc, char** argv) {
             }
             /// hist
             if(!short_flag){
+                cout << "hist > binloc " << binloc << endl;
               if(x<=binloc[icol].front()-bin_size){ ///>    add new bins of the same size in the beginning or the end so that a new element fits in
                 while(x<=binloc[icol].front()-bin_size){
                   binloc[icol].push_front(binloc[icol].front()-bin_size);
@@ -323,6 +352,7 @@ int main(int argc, char** argv) {
   }
   for(size_t icol=0; icol<col_names.size();++icol){
     if(static_cast<size_t>(count[icol].value()[0])<buffer_size){ ///> full buffer --> build bins
+      size_t truncated_buffer_size = static_cast<size_t>(count[icol].value()[0]);
       /// p2 quantiles::
       //size_t iqp = 0;
       for(size_t im=1; im<probabilities.size()-1;++im){
@@ -338,10 +368,11 @@ int main(int argc, char** argv) {
       if(!short_flag){
         auto mmp = std::minmax_element(begin(buffer[icol]),end(buffer[icol]));
         bin_size = (*mmp.second-*mmp.first)/(bi);
-        for(size_t i=0; i<bi; ++i) {///> create bins
-          binloc[icol][i]=*mmp.first + (i+1)*bin_size;///> ends of the bins are stored
+                cout << " bin_size = ( " << *mmp.second << " - " << *mmp.first << " )/( " << bi <<" ) = " << bin_size << endl;
+        for(size_t i=0; i<=bi; ++i) {///> create bins
+          binloc[icol][i]=*mmp.first + (i)*bin_size;///> ends of the bins are stored
         }
-        for(size_t ibuf=0; ibuf<buffer_size; ++ibuf) {///> fill bins
+        for(size_t ibuf=0; ibuf<truncated_buffer_size; ++ibuf) {///> fill bins
           auto it = std::lower_bound( binloc[icol].begin() , binloc[icol].end() , buffer[icol][ibuf]);
           ++whist[icol][std::distance(binloc[icol].begin(), it)];
         }
@@ -383,23 +414,52 @@ int main(int argc, char** argv) {
     /// hist --- make splines  and get an average histogram
     ///
     if(!short_flag){
-      double bin_size_div_2 = (binloc[icol][1]-binloc[icol][0])*0.5;
-      vector<double>mbinloc;
-      mbinloc.push_back(binloc[icol].front()-3*bin_size_div_2);
-      for(auto j: binloc[icol]) mbinloc.push_back(j-bin_size_div_2);
-      mbinloc.push_back(mbinloc.back()+2*bin_size_div_2);
-      vector<double> wshist;
-      wshist.push_back(0.0);
-      for(auto j:whist[icol]) wshist.push_back(j);
-      wshist.push_back(0.0);
-      tk::spline s; //  print out all bins or spline the beans and divide the spline to get approximate bins
-      s.set_points(mbinloc,wshist);
+      //cout << "bin_size_div_2 "<<bin_size_div_2 << endl;
+      //vector<double>mbinloc; ///> location of the center of the bins
+      //mbinloc.push_back(binloc[icol].front()-3*bin_size_div_2);
+      //for(auto j: binloc[icol]) mbinloc.push_back(j-bin_size_div_2);
+      //mbinloc.push_back(mbinloc.back()+2*bin_size_div_2);
+      cout << "binloc = " << binloc << endl;
+      //cout << "mbinloc = " << mbinloc << endl;
+      cout << "whist = " << whist << endl;
       double final_bin_size= (max[icol]-min[icol])/bins;
-      histloc[icol][0]=min[icol]+final_bin_size*0.5;
-      hist[icol][0]=s(static_cast<double>(histloc[icol][0]));
+      cout << "final_bin_size = " << final_bin_size << endl;
+      histloc[icol][0]=min[icol]+final_bin_size;///> may be make it a center intead of upper limit
+      //histloc[icol][0]=min[icol]+final_bin_size*0.5;
+      //hist[icol][0]=s(static_cast<double>(histloc[icol][0]));
       for(size_t j=1;j<bins;++j) {
         histloc[icol][j]=histloc[icol][j-1]+final_bin_size;
-        hist[icol][j]=s(static_cast<double>(histloc[icol][j]));///> put a check on the spline
+      }
+      cout << " histloc " << histloc << endl;
+      double prev_nest,prev_qest=0.0;
+      for(size_t iest=0, ical=0;iest<bins;++iest){ ///> similar to p2 for estimating histogram bins at specific locations
+        double pre_sum = prev_qest;///> sum all bins preceding the est marker
+        double nest=histloc[icol][iest],qest_after=0.0, qest_before=0.0;
+        cout << "pre_sum " << pre_sum << endl;
+        while(binloc[icol][ical]<nest) {
+          pre_sum+=whist[icol][ical];
+          ++ical;
+        }
+        cout << "pre_sum " << pre_sum << endl;
+        /// estimates histogram's bin value qi at needed location ni
+        if(ical<iest) cout << "error: icatl<iest\n";
+        //if(ical<3) cout << " error ical < 3\n";
+        if(ical-1==0 || binloc[icol][ical]-nest<nest-binloc[icol][ical-1]){ ///> closer to the left border |....i.|.......|
+          double nn=binloc[icol][ical+1], np=binloc[icol][ical-1], ni=binloc[icol][ical];
+          double qp=whist[icol][ical-1],qi=whist[icol][ical],qn=whist[icol][ical+1];
+          qest_before = hist_adjust_p2_left( nest, nn, np, ni, qp,qi,qn);
+          qest_after= qi-qest_before;
+        } else{ ///> closer to the left border |......|.i.....|
+          double nn=binloc[icol][ical], np=binloc[icol][ical-2], ni=binloc[icol][ical-1];
+          double qp=whist[icol][ical-2],qi=whist[icol][ical-1],qn=whist[icol][ical];
+          qest_before = hist_adjust_p2_right( nest, nn, np, ni, qp,qi,qn);
+          qest_after= qi-qest_before;
+        }
+        ++ical;
+        hist[icol][iest]= qest_before+pre_sum;
+        cout << "hist  " << hist << endl;
+        prev_nest=nest;
+        prev_qest=qest_after;
       }
     }
     //cout << "bin_size_div_2 = " << bin_size_div_2 << endl;
@@ -547,6 +607,27 @@ int main(int argc, char** argv) {
       }
     }
     //draw_histograms("hhist",hist_abs,col_names.size());
+    for(size_t ih=0; ih<whist[0].size();++ih){///>print histograms
+      cout << "rhist_" ;
+      cout << ih;
+      cout << ",";
+      for(size_t icol=0; icol<whist.size();++icol){
+        cout << llround(whist[icol][ih]);///> change to size_t later
+        if(icol!=col_names.size()-1) cout << ',';
+      } cout << endl;
+    }
+    vector<vector<double>> ohist_abs(col_names.size());///> calculate original (not approximated) histogram plot heights
+    for(size_t icol=0; icol<col_names.size();++icol){
+      size_t maxe = *std::max_element(begin(whist[icol]),end(whist[icol]));
+      size_t mine = *std::min_element(begin(whist[icol]),end(whist[icol]));
+      size_t diff_abs = maxe-mine;
+      for(auto i: whist[icol]) ohist_abs[icol].push_back((i-mine)/diff_abs);
+      for(auto &i: ohist_abs[icol]) {
+        if(i<=0) i=0;
+        else if (i>=1) i=1;
+      }
+    }
+    //draw_histograms("hohist",ohist_abs,col_names.size());
   }
 
   return 0;
