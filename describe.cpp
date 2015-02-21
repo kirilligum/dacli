@@ -39,12 +39,12 @@ void draw_histograms(const string & name, const T& hist, size_t size){
 
 template<typename T>
 auto hist_adjust_p2_left( T nest, T nn, T np, T ni, T qp,T qi,T qn){
-  double qest_before;
+  T qest_before;
   if(qp<qi&&qi<qn){
-    double wep=nest-np,wie=ni-nest,wip=ni-np,wni=nn-ni,wnp=nn-np, wne=nn-nest;
+    T wep=nest-np,wie=ni-nest,wip=ni-np,wni=nn-ni,wnp=nn-np, wne=nn-nest;
     qest_before= wep*(qi*wni*(wip+wne)-qn*wie*wip)/(wip*wni*wnp);
   } else { ///> use linear
-    double wep=nest-np,wip=ni-np;
+    T wep=nest-np,wip=ni-np;
     qest_before= qi*wep/wip;
   }
   return qest_before;
@@ -52,13 +52,13 @@ auto hist_adjust_p2_left( T nest, T nn, T np, T ni, T qp,T qi,T qn){
 
 template<typename T>
 auto hist_adjust_p2_right( T nest, T nn, T np, T ni, T qp,T qi,T qn){
-  double qest_before;
+  T qest_before;
   if(qp<qi&&qi<qn){
-    double wep=nest-np,wip=ni-np,wni=nn-ni,wnp=nn-np, wne=nn-nest, wei=nest-ni;
+    T wep=nest-np,wip=ni-np,wni=nn-ni,wnp=nn-np, wne=nn-nest, wei=nest-ni;
     qest_before= wei*(qi*wne*wni+qn*wep*wip)/(wip*wni*wnp);
   } else { ///> use linear
-    double wip=ni-np, wei=nest-ni;
-    qest_before= qi*wei/wip;
+    T wip=ni-np, wei=nest-ni;
+    qest_before= qn*wei/wip;
   }
   return qest_before;
 }
@@ -155,9 +155,9 @@ int main(int argc, char** argv) {
       desired_positions[icol][i] = 1. + 2. * (num_quantiles + 1.) * positions_increments[icol][i];
     }
   }
-  size_t bins = 8;///> number of bins
+  size_t bins = 5;///> number of bins
   if(H_value) bins = atoi(H_value);
-  size_t bi = 2*bins;///> initial number of bins; small number gives negative result
+  size_t bi = 5*bins;///> initial number of bins; small number gives negative result
   size_t bl = 2*bi;///> limiting  number of bins
   double bin_size=0.0;
   vector<deque<double>> binloc(col_names.size(), deque<double>(bi+1));///> working histogram
@@ -461,20 +461,24 @@ int main(int argc, char** argv) {
         }else{
           /// estimates histogram's bin value qi at needed location ni
           if(ical-1==0 || binloc[icol][ical]-nest<nest-binloc[icol][ical-1]){ ///> closer to the left border |....i.|.......|
+            cout << " |....i.|.......| "<< endl;
+
             double nn=binloc[icol][ical+1], np=binloc[icol][ical-1], ni=binloc[icol][ical];
             double qp=whist[icol][ical-1],qi=whist[icol][ical],qn=whist[icol][ical+1];
             cout << "ical!=0" << vector<double>{ nest, nn, np, ni, qp,qi,qn} << endl;
             qest_before = hist_adjust_p2_left( nest, nn, np, ni, qp,qi,qn);
             qest_after= qi-qest_before;
           } else{ ///> closer to the left border |......|.i.....|
+            cout << " |......|.i.....| "<< endl;
             double nn=binloc[icol][ical], np=binloc[icol][ical-2], ni=binloc[icol][ical-1];
             double qp=whist[icol][ical-2],qi=whist[icol][ical-1],qn=whist[icol][ical];
             qest_before = hist_adjust_p2_right( nest, nn, np, ni, qp,qi,qn);
-            qest_after= qi-qest_before;
+            qest_after= qn-qest_before;
           }
         }
         ++ical;
         cout << "qest_before " <<  qest_before << endl;
+        cout << "qest_after " <<  qest_after << endl;
         hist[icol][iest]= qest_before+pre_sum;
         cout << "hist  " << hist << endl;
         prev_nest=nest;
