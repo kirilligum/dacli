@@ -51,7 +51,7 @@ dacli (Data Analysis Command Line Interface) is a set of high performance tools 
     plot_hist_8                       +          ########+   ###:       +           +             
     plot_hist_9                       +          +           +          +           +             
 
-Notes: (1) `quant_0` is `min`, `quant_0.5` is `median`, and `quant_1` is `max`. (2) Histograms are interpolated and approximate just to give you an idea of how the data is distributed.
+Notes: (1) `quant_0` is `min`, `quant_0.5` is `median`, and `quant_1` is `max`. (2) Histograms are interpolated and approximate just to give you an idea of how the data is distributed. Exact number of histograms are available but the number of bins won't be constant. (3) You can set the number of quantiles or histograms. (4) I'm currently working on an option to combine results of different runs of describe; it will allow an easy use on clusters with Hadoop and other schedulers. 
 
 **cuti** -- similar to `cut` but cuts the table based on its header and index into a subtable not just by integer value of index but by regex and ranges
 
