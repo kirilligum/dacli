@@ -5,13 +5,13 @@ dacli (Data Analysis Command Line Interface) is a set of high performance tools 
 
 # Why:
 - **no learning curve**  -- use Linux instead of learning new environments and languages.
-- **fastest** profiler-optimized cache-aware C++ and automatic switching between the latest algorithms. Faster than NumPy, Matlab, R, and others.
-- **really big data** --  one-pass online algorithms that minimize I/O and don't crush due to lack of memory, parallel reading and computing, and convenient to schedule on a clusters.
-- **prototype quickly** = intuitive work flow + less typing + leverage CLI tools that you already know. Simply pipe '|' one command into another and don't worry about compatibility or control-flow.
+- **fastest** -- profiler-optimized cache-aware C++ and automatic switching between the best up-to-date algorithms. Faster than NumPy, Matlab, R, and others.
+- **really big data** --  one-pass online algorithms that minimize I/O and don't crush when data can't fit into the memory, parallel reading and computing, and convenient to schedule on a clusters.
+- **prototype quickly** -- intuitive work flow + less typing + leverage CLI tools that you already know. Simply pipe '|' one command into another and don't worry about compatibility or control-flow.
 
 # Tools:
 
-**describe** -- mean, variance, quantiles, histogram, and other descriptive statistics using big-data-friendly algorithms  that read data only once, scale linear and use constant memory.
+**describe** -- mean, variance, quantiles, histogram, and other descriptive statistics using big-data-friendly algorithms that read data only once, scale linear, and use constant memory.
 
     > cat test2.csv| ./describe |column -ts,
 
