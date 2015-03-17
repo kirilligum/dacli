@@ -43,7 +43,7 @@ dacli (Data Analysis Command Line Interface) is a set of high performance tools 
     plot_hist_4                   #+         ########+   ###:       +          +             
     plot_hist_5                   +          +           +          +          +             
 
-Note, `quant_0` is `min`, `quant_0.5` is `median`, and `quant_1` is `max`.
+Notes: (1) `quant_0` is `min`, `quant_0.5` is `median`, and `quant_1` is `max`. (2) Histograms are interpolated and approximate just to give you an idea of how the data is distributed.
 
 **cuti** -- similar to `cut` but cuts the table based on its header and index into a subtable not just by integer value of index but by regex and ranges
 

@@ -155,7 +155,7 @@ int main(int argc, char** argv) {
       desired_positions[icol][i] = 1. + 2. * (num_quantiles + 1.) * positions_increments[icol][i];
     }
   }
-  size_t bins = 2;///> number of bins
+  size_t bins = 4;///> number of bins
   if(H_value) bins = atoi(H_value);
   size_t bi = 2*bins;///> initial number of bins; small number gives negative result
   size_t bl = 2*bi;///> limiting  number of bins
