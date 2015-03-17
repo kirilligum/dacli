@@ -26,15 +26,16 @@ inline int count_lines(char* buf, int start, int len){
 
 int main() {
   cin.sync_with_stdio(false);
-  //const int buf_size = 1024*16;
-  const int buf_size = 1024*16*16*64*64;
+  const int buf_size = 1024*16;
+  //const int buf_size = 1024*16*16;
+  //const int buf_size = 1024*16*16*64*64;
   int count = 0;
   //int max_threads =  1;
-  int max_threads =  std::thread::hardware_concurrency()-1;
+  //int max_threads =  std::thread::hardware_concurrency()-1;
   //int max_threads =  std::thread::hardware_concurrency();
-  cout << "number of threads = " << max_threads << endl;
-  vector<std::future<int>> vt(max_threads);
-  vector<int> vc(max_threads,0);
+  //cout << "number of threads = " << max_threads << endl;
+  //vector<std::future<int>> vt(max_threads);
+  //vector<int> vc(max_threads,0);
   //int bytes_read;
   //char buf[buf_size+1];
   //int fd = STDIN_FILENO;

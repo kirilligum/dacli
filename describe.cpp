@@ -155,9 +155,9 @@ int main(int argc, char** argv) {
       desired_positions[icol][i] = 1. + 2. * (num_quantiles + 1.) * positions_increments[icol][i];
     }
   }
-  size_t bins = 5;///> number of bins
+  size_t bins = 2;///> number of bins
   if(H_value) bins = atoi(H_value);
-  size_t bi = 5*bins;///> initial number of bins; small number gives negative result
+  size_t bi = 2*bins;///> initial number of bins; small number gives negative result
   size_t bl = 2*bi;///> limiting  number of bins
   double bin_size=0.0;
   vector<deque<double>> binloc(col_names.size(), deque<double>(bi+1));///> working histogram
@@ -242,62 +242,62 @@ int main(int argc, char** argv) {
             /// p2
             std::size_t sample_cell = 1;
             // find cell k = sample_cell such that heights[icol][k-1] <= sample < heights[icol][k]
-            //if(x < heights[icol][0]) {
-              //heights[icol][0] = x;
-              //sample_cell = 1;
-            //} else if(x >= heights[icol][num_markers - 1]) {
-              //heights[icol][num_markers - 1] = x;
-              //sample_cell = num_markers - 1;
-            //} else {
-              //auto it = std::upper_bound( heights[icol].begin() , heights[icol].end() , x);
-              //sample_cell = std::distance(heights[icol].begin(), it);
-            //}
-            //// update actual positions of all markers above sample_cell index
-            //for(std::size_t i = sample_cell; i < num_markers; ++i) {
-              //++actual_positions[icol][i];
-            //}
-            //// update desired positions of all markers
-            //for(std::size_t i = 0; i < num_markers; ++i) {
-              //desired_positions[icol][i] += positions_increments[icol][i];
-            //}
-            //// adjust heights[icol] and actual positions of markers 1 to num_markers-2 if necessary
-            //for(std::size_t i = 1; i <= num_markers - 2; ++i) {
-              //// offset to desired position
-              //double d = desired_positions[icol][i] - actual_positions[icol][i];
-              //// offset to next position
-              //double dp = actual_positions[icol][i+1] - actual_positions[icol][i];
-              //// offset to previous position
-              //double dm = actual_positions[icol][i-1] - actual_positions[icol][i];
-              //// height ds
-              //if((d >= 1 && dp > 1) || (d <= -1 && dm < -1)) {
-                //double hp = (heights[icol][i+1] - heights[icol][i]) / dp;
-                //double hm = (heights[icol][i-1] - heights[icol][i]) / dm;
-                //bool neg_d = signbit(d);
-                //// try adjusting heights[icol][i] using p-squared formula
-                //double h;
-                //if(neg_d) {
-                  //h = heights[icol][i] -((-1-dm)*hp +(dp+1)*hm)/(dp-dm);
-                //}else{
-                  //h = heights[icol][i] +(( 1-dm)*hp +(dp-1)*hm)/(dp-dm);
-                //}
-                //if(heights[icol][i - 1] < h && h < heights[icol][i + 1]) {
-                    //heights[icol][i] = h;
-                //} else {
-                    //// use linear formula
-                    //if(d > 0) {
-                        //heights[icol][i] += hp;
-                    //}
-                    //if(d < 0) {
-                        //heights[icol][i] -= hm;
-                    //}
-                //}
-                //if(neg_d) {
-                  //actual_positions[icol][i] --;
-                //}else{
-                  //actual_positions[icol][i] ++;
-                //}
-              //}
-            //}
+            if(x < heights[icol][0]) {
+              heights[icol][0] = x;
+              sample_cell = 1;
+            } else if(x >= heights[icol][num_markers - 1]) {
+              heights[icol][num_markers - 1] = x;
+              sample_cell = num_markers - 1;
+            } else {
+              auto it = std::upper_bound( heights[icol].begin() , heights[icol].end() , x);
+              sample_cell = std::distance(heights[icol].begin(), it);
+            }
+            // update actual positions of all markers above sample_cell index
+            for(std::size_t i = sample_cell; i < num_markers; ++i) {
+              ++actual_positions[icol][i];
+            }
+            // update desired positions of all markers
+            for(std::size_t i = 0; i < num_markers; ++i) {
+              desired_positions[icol][i] += positions_increments[icol][i];
+            }
+            // adjust heights[icol] and actual positions of markers 1 to num_markers-2 if necessary
+            for(std::size_t i = 1; i <= num_markers - 2; ++i) {
+              // offset to desired position
+              double d = desired_positions[icol][i] - actual_positions[icol][i];
+              // offset to next position
+              double dp = actual_positions[icol][i+1] - actual_positions[icol][i];
+              // offset to previous position
+              double dm = actual_positions[icol][i-1] - actual_positions[icol][i];
+              // height ds
+              if((d >= 1 && dp > 1) || (d <= -1 && dm < -1)) {
+                double hp = (heights[icol][i+1] - heights[icol][i]) / dp;
+                double hm = (heights[icol][i-1] - heights[icol][i]) / dm;
+                bool neg_d = signbit(d);
+                // try adjusting heights[icol][i] using p-squared formula
+                double h;
+                if(neg_d) {
+                  h = heights[icol][i] -((-1-dm)*hp +(dp+1)*hm)/(dp-dm);
+                }else{
+                  h = heights[icol][i] +(( 1-dm)*hp +(dp-1)*hm)/(dp-dm);
+                }
+                if(heights[icol][i - 1] < h && h < heights[icol][i + 1]) {
+                    heights[icol][i] = h;
+                } else {
+                    // use linear formula
+                    if(d > 0) {
+                        heights[icol][i] += hp;
+                    }
+                    if(d < 0) {
+                        heights[icol][i] -= hm;
+                    }
+                }
+                if(neg_d) {
+                  actual_positions[icol][i] --;
+                }else{
+                  actual_positions[icol][i] ++;
+                }
+              }
+            }
             /// hist
             if(!short_flag){
                 //cout << "hist > binloc " << binloc << endl;
@@ -609,15 +609,15 @@ int main(int argc, char** argv) {
       //for(auto i: qhist) qhist_count.push_back(static_cast<size_t>(i/diff_rel*count[icol].double_value()));
     }
     //draw_histograms("qhist",qhist_abs,col_names.size());
-    for(size_t ih=0; ih<hist[0].size();++ih){///>print histograms
-      cout << "hist_" ;
-      cout << ih;
-      cout << ",";
-      for(size_t icol=0; icol<hist.size();++icol){
-        cout << llround(hist[icol][ih]);///> change to size_t later
-        if(icol!=col_names.size()-1) cout << ',';
-      } cout << endl;
-    }
+    //for(size_t ih=0; ih<hist[0].size();++ih){///>print histograms
+      //cout << "hist_" ;
+      //cout << ih;
+      //cout << ",";
+      //for(size_t icol=0; icol<hist.size();++icol){
+        //cout << llround(hist[icol][ih]);///> change to size_t later
+        //if(icol!=col_names.size()-1) cout << ',';
+      //} cout << endl;
+    //}
     vector<vector<double>> hist_abs(col_names.size());///> calculate histogram plot heights
     for(size_t icol=0; icol<col_names.size();++icol){
       size_t maxe = *std::max_element(begin(hist[icol]),end(hist[icol]));
@@ -631,7 +631,7 @@ int main(int argc, char** argv) {
     }
     //draw_histograms("hhist",hist_abs,col_names.size());
     for(size_t ih=0; ih<whist[0].size();++ih){///>print histograms
-      cout << "rhist_" ;
+      cout << "hist_" ;
       cout << ih;
       cout << ",";
       for(size_t icol=0; icol<whist.size();++icol){
@@ -644,13 +644,13 @@ int main(int argc, char** argv) {
       size_t maxe = *std::max_element(begin(whist[icol]),end(whist[icol]));
       size_t mine = *std::min_element(begin(whist[icol]),end(whist[icol]));
       size_t diff_abs = maxe-mine;
-      for(auto i: whist[icol]) ohist_abs[icol].push_back((i-mine)/diff_abs);
+      for(auto i: whist[icol]) ohist_abs[icol].push_back(static_cast<double>(i-mine)/diff_abs);
       for(auto &i: ohist_abs[icol]) {
         if(i<=0) i=0;
         else if (i>=1) i=1;
       }
     }
-    //draw_histograms("hohist",ohist_abs,col_names.size());
+    draw_histograms("plot_hist",ohist_abs,col_names.size());
   }
 
   return 0;
