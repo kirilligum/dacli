@@ -81,6 +81,27 @@ Notes: (1) `quant_0` is `min`, `quant_0.5` is `median`, and `quant_1` is `max`. 
     eed  123  43   .0923  232.3  65
     e    1.2  7    23     12     73
     f    43   4    1      0.01   23
+
+**impute** -- (todo) imputes missing values using forward fill, mean, median, stochastic regression, multiple imputation, GMM, regression using extremely randomized trees.
+
+    > cat test.csv| ./impute |column -ts,
+
+**histogram** -- (todo) creates a histogram of the data in linear time using constant-size bins (single pass), quantiles (single pass), V-optimized variable size histogram (multiple passes). Useful for visualization and speeding up machine learning.
+
+    > cat test.csv| ./histogram |column -ts,
+
+**feature importance** -- (todo) ranks features (columns) by importance using Lasso, PCA, ensemble forest, or auto-encoder.
+
+    > cat test.csv| ./feature_importance |column -ts,
+
+**build regression** -- (todo) using ensemble trees, builds decision forest.
+
+    > cat test.csv| ./build_regression > decision_trees.txt
+
+**predict regression** -- (todo) using decision trees, predicts regression
+
+    > cat test.csv| ./predict_regression decision_trees.txt |column -ts,
+
 # Installation:
 compile using C++14 compiler. gcc 4.9.1 is fine. Ex: `g++ -std=c++14 transpose.cpp -o transpose`
 
